@@ -254,12 +254,16 @@ async function updateUI(session) {
 
     if (userRole === 'admin') {
       adminMenuWrapper.classList.remove('hidden')
+      document.getElementById('userMenuWrapper').classList.add('hidden')
+      fetchCourses()
+      window.loadContent('approvals')
     } else {
       adminMenuWrapper.classList.add('hidden')
+      document.getElementById('userMenuWrapper').classList.remove('hidden')
+      fetchCourses()
+      window.loadContent('guidelines')
     }
 
-    fetchCourses()
-    window.loadContent('guidelines')
   } else {
     loginSection.classList.remove('hidden')
     mainAppSection.classList.add('hidden')
@@ -331,8 +335,15 @@ function clearStoredAuthSession() {
   }
 }
 
-supabase.auth.getSession().then(({ data: { session } }) => updateUI(session))
-supabase.auth.onAuthStateChange((_event, session) => updateUI(session))
+let _initialSessionHandled = false
+supabase.auth.getSession().then(({ data: { session } }) => {
+  _initialSessionHandled = true
+  updateUI(session)
+})
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (!_initialSessionHandled) return
+  updateUI(session)
+})
 
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault()
@@ -367,6 +378,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
       id: data.user.id,
       full_name: name,
       school_name: school,
+      email: email,
       role: 'student',
       status: 'pending'
     })
@@ -497,24 +509,24 @@ window.saveProfile = async () => {
 
     const profileMutation = existingProfile
       ? supabase
-          .from('users_profile')
-          .update({
-            full_name: fullName,
-            school_name: schoolName
-          })
-          .eq('id', session.user.id)
-          .select('id, full_name, school_name')
-          .single()
+        .from('users_profile')
+        .update({
+          full_name: fullName,
+          school_name: schoolName
+        })
+        .eq('id', session.user.id)
+        .select('id, full_name, school_name')
+        .single()
       : supabase
-          .from('users_profile')
-          .insert({
-            id: session.user.id,
-            full_name: fullName,
-            school_name: schoolName,
-            role: 'student'
-          })
-          .select('id, full_name, school_name')
-          .single()
+        .from('users_profile')
+        .insert({
+          id: session.user.id,
+          full_name: fullName,
+          school_name: schoolName,
+          role: 'student'
+        })
+        .select('id, full_name, school_name')
+        .single()
 
     const { data: savedProfile, error } = await withTimeout(
       profileMutation,
@@ -1216,8 +1228,8 @@ async function renderQuizAdminPage() {
     </div>
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       ${(questions || []).length === 0
-        ? '<p class="text-center text-slate-400 py-16">ยังไม่มีคำถาม กด "เพิ่มคำถาม" เพื่อเริ่มต้น</p>'
-        : `<table class="w-full text-left text-sm text-slate-600">
+      ? '<p class="text-center text-slate-400 py-16">ยังไม่มีคำถาม กด "เพิ่มคำถาม" เพื่อเริ่มต้น</p>'
+      : `<table class="w-full text-left text-sm text-slate-600">
             <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
               <tr><th class="p-4">คำถาม</th><th class="p-4">รูปแบบ</th><th class="p-4 text-center">ใช้ใน</th><th class="p-4 text-center">คะแนน</th><th class="p-4 text-right">การจัดการ</th></tr>
             </thead>
@@ -1254,9 +1266,9 @@ window.renderQuizFormFields = () => {
     container.innerHTML = `
       <div>
         <label class="block text-xs font-bold text-slate-500 mb-2">ตัวเลือก (เลือก ● ข้างหน้าข้อที่ถูกต้อง)</label>
-        ${['A','B','C','D'].map(l => `
+        ${['A', 'B', 'C', 'D'].map(l => `
           <div class="flex items-center gap-2 mb-2">
-            <input type="radio" name="mcq_correct" value="${l}" ${l==='A'?'checked':''} class="accent-violet-600 shrink-0">
+            <input type="radio" name="mcq_correct" value="${l}" ${l === 'A' ? 'checked' : ''} class="accent-violet-600 shrink-0">
             <span class="text-xs font-bold text-slate-500 w-5">${l}.</span>
             <input type="text" id="opt_${l}" placeholder="ตัวเลือก ${l}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
           </div>`).join('')}
@@ -1273,7 +1285,7 @@ window.renderQuizFormFields = () => {
       <div>
         <label class="block text-xs font-bold text-slate-500 mb-2">คู่ที่ถูกต้อง (อย่างน้อย 2 คู่)</label>
         <div id="matchingPairs" class="space-y-2">
-          ${[1,2,3].map(i => `
+          ${[1, 2, 3].map(i => `
             <div class="flex gap-2 items-center">
               <input type="text" placeholder="ด้านซ้าย ${i}" id="match_left_${i}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
               <span class="text-slate-400 font-bold">↔</span>
@@ -1288,7 +1300,7 @@ window.renderQuizFormFields = () => {
       <div>
         <label class="block text-xs font-bold text-slate-500 mb-2">รายการตามลำดับที่ถูกต้อง (อย่างน้อย 2 รายการ)</label>
         <div id="dragdropItems" class="space-y-2">
-          ${[1,2,3].map(i => `
+          ${[1, 2, 3].map(i => `
             <div class="flex gap-2 items-center">
               <span class="text-xs text-slate-400 w-5 shrink-0">${i}.</span>
               <input type="text" placeholder="รายการที่ ${i}" id="dd_item_${i}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
@@ -1337,12 +1349,12 @@ window.editQuizQuestion = async (id) => {
 
   if (q.type === 'mcq') {
     const opts = q.options || []
-    ;['A','B','C','D'].forEach((l, i) => {
-      const el = document.getElementById(`opt_${l}`)
-      if (el) el.value = opts[i] || ''
-    })
+      ;['A', 'B', 'C', 'D'].forEach((l, i) => {
+        const el = document.getElementById(`opt_${l}`)
+        if (el) el.value = opts[i] || ''
+      })
     const correctIndex = opts.indexOf(q.answer)
-    const correctLabel = ['A','B','C','D'][correctIndex]
+    const correctLabel = ['A', 'B', 'C', 'D'][correctIndex]
     if (correctLabel) {
       const radio = document.querySelector(`input[name="mcq_correct"][value="${correctLabel}"]`)
       if (radio) radio.checked = true
@@ -1356,9 +1368,9 @@ window.editQuizQuestion = async (id) => {
     const c = document.getElementById('matchingPairs')
     if (c) c.innerHTML = pairs.map((p, i) => `
       <div class="flex gap-2 items-center">
-        <input type="text" value="${escapeHtml(p.left)}" id="match_left_${i+1}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
+        <input type="text" value="${escapeHtml(p.left)}" id="match_left_${i + 1}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
         <span class="text-slate-400 font-bold">↔</span>
-        <input type="text" value="${escapeHtml(p.right)}" id="match_right_${i+1}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
+        <input type="text" value="${escapeHtml(p.right)}" id="match_right_${i + 1}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
       </div>`).join('')
   } else if (q.type === 'dragdrop') {
     const items = q.options || []
@@ -1366,8 +1378,8 @@ window.editQuizQuestion = async (id) => {
     const c = document.getElementById('dragdropItems')
     if (c) c.innerHTML = items.map((item, i) => `
       <div class="flex gap-2 items-center">
-        <span class="text-xs text-slate-400 w-5 shrink-0">${i+1}.</span>
-        <input type="text" value="${escapeHtml(item)}" id="dd_item_${i+1}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
+        <span class="text-xs text-slate-400 w-5 shrink-0">${i + 1}.</span>
+        <input type="text" value="${escapeHtml(item)}" id="dd_item_${i + 1}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
       </div>`).join('')
   }
   document.getElementById('quizModal').classList.remove('hidden')
@@ -1390,12 +1402,12 @@ window.saveQuizQuestion = async () => {
 
   if (qType === 'mcq') {
     const optMap = {}
-    ;['A','B','C','D'].forEach(l => {
-      const v = document.getElementById(`opt_${l}`)?.value.trim()
-      if (v) optMap[l] = v
-    })
+      ;['A', 'B', 'C', 'D'].forEach(l => {
+        const v = document.getElementById(`opt_${l}`)?.value.trim()
+        if (v) optMap[l] = v
+      })
     const correctLabel = document.querySelector('input[name="mcq_correct"]:checked')?.value
-    options = ['A','B','C','D'].map(l => optMap[l]).filter(Boolean)
+    options = ['A', 'B', 'C', 'D'].map(l => optMap[l]).filter(Boolean)
     answer = optMap[correctLabel] || null
     if (options.length < 2 || !answer) {
       statusEl.textContent = 'กรุณากรอกตัวเลือกอย่างน้อย 2 ข้อ และเลือกคำตอบที่ถูกต้อง'
@@ -1667,7 +1679,7 @@ window.submitQuiz = async (quizType) => {
 
 function destroyVideoPlayer() {
   if (videoCheckInterval) { clearInterval(videoCheckInterval); videoCheckInterval = null }
-  if (ytPlayer && typeof ytPlayer.destroy === 'function') { try { ytPlayer.destroy() } catch {} ; ytPlayer = null }
+  if (ytPlayer && typeof ytPlayer.destroy === 'function') { try { ytPlayer.destroy() } catch { }; ytPlayer = null }
   maxReachedTime = 0
   videoQuestionsForCourse = []
   answeredVideoQuestions = new Set()
@@ -1734,8 +1746,8 @@ function startVideoMonitor() {
 
     for (const q of videoQuestionsForCourse) {
       if (!answeredVideoQuestions.has(q.id) &&
-          currentTime >= q.timestamp_sec &&
-          currentTime < q.timestamp_sec + 1.5) {
+        currentTime >= q.timestamp_sec &&
+        currentTime < q.timestamp_sec + 1.5) {
         ytPlayer.pauseVideo()
         showVideoQuestionModal(q)
         break
@@ -1778,7 +1790,7 @@ window.submitVideoQuestion = async () => {
         question_id: q.id, is_correct: isCorrect, first_try: currentVQFirstTry
       })
     }
-  } catch {}
+  } catch { }
 
   if (isCorrect) {
     feedbackEl.textContent = '✅ ถูกต้อง! กดดูวิดีโอต่อได้เลย'
@@ -1826,7 +1838,7 @@ async function renderVideoAdminPage(course) {
 
   function secsToMMSS(s) {
     const m = Math.floor(s / 60)
-    return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`
+    return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
   }
 
   const rows = (vqs || []).map(q => `
@@ -1856,8 +1868,8 @@ async function renderVideoAdminPage(course) {
     </div>
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       ${(vqs || []).length === 0
-        ? '<p class="text-center text-slate-400 py-16">ยังไม่มีคำถาม กด "เพิ่มคำถาม" เพื่อเริ่มต้น</p>'
-        : `<table class="w-full text-left text-sm text-slate-600">
+      ? '<p class="text-center text-slate-400 py-16">ยังไม่มีคำถาม กด "เพิ่มคำถาม" เพื่อเริ่มต้น</p>'
+      : `<table class="w-full text-left text-sm text-slate-600">
             <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
               <tr><th class="p-4">เวลา</th><th class="p-4">คำถาม</th><th class="p-4">ตัวเลือก</th><th class="p-4 text-right">การจัดการ</th></tr>
             </thead>
@@ -1875,17 +1887,17 @@ window.openVideoQuestionModal = (questionData, courseId) => {
   document.getElementById('vqAdminStatus').textContent = ''
 
   const mmss = questionData
-    ? `${String(Math.floor(questionData.timestamp_sec / 60)).padStart(2,'0')}:${String(questionData.timestamp_sec % 60).padStart(2,'0')}`
+    ? `${String(Math.floor(questionData.timestamp_sec / 60)).padStart(2, '0')}:${String(questionData.timestamp_sec % 60).padStart(2, '0')}`
     : ''
   document.getElementById('vqAdminTimestamp').value = mmss
   document.getElementById('vqAdminQuestion').value = questionData?.question || ''
-  const opts = questionData?.options || ['','','','']
-  ;['A','B','C','D'].forEach((l, i) => {
-    const el = document.getElementById(`vqopt_${l}`)
-    if (el) el.value = opts[i] || ''
-  })
+  const opts = questionData?.options || ['', '', '', '']
+    ;['A', 'B', 'C', 'D'].forEach((l, i) => {
+      const el = document.getElementById(`vqopt_${l}`)
+      if (el) el.value = opts[i] || ''
+    })
   const answerIndex = (questionData?.options || []).indexOf(questionData?.answer)
-  const correctLabel = ['A','B','C','D'][answerIndex] || 'A'
+  const correctLabel = ['A', 'B', 'C', 'D'][answerIndex] || 'A'
   const radio = document.querySelector(`input[name="vq_correct"][value="${correctLabel}"]`)
   if (radio) radio.checked = true
 
@@ -1913,11 +1925,11 @@ window.saveVideoQuestion = async () => {
   const timestamp_sec = (mm || 0) * 60 + (ss || 0)
 
   const optMap = {}
-  ;['A','B','C','D'].forEach(l => {
-    const v = document.getElementById(`vqopt_${l}`)?.value.trim()
-    if (v) optMap[l] = v
-  })
-  const options = ['A','B','C','D'].map(l => optMap[l]).filter(Boolean)
+    ;['A', 'B', 'C', 'D'].forEach(l => {
+      const v = document.getElementById(`vqopt_${l}`)?.value.trim()
+      if (v) optMap[l] = v
+    })
+  const options = ['A', 'B', 'C', 'D'].map(l => optMap[l]).filter(Boolean)
   const answer = optMap[correctLabel] || null
 
   if (!question || !timestampRaw || options.length < 2 || !answer) {
@@ -1963,9 +1975,7 @@ async function renderApprovalsPage() {
   container.className = 'max-w-4xl mx-auto w-full animate-fade-in'
 
   const { data: users, error } = await supabase
-    .from('users_profile')
-    .select('*')
-    .order('created_at', { ascending: false })
+    .rpc('get_all_profiles')
 
   if (error) {
     container.innerHTML = `<p class="text-red-500 text-center py-12">โหลดข้อมูลไม่สำเร็จ: ${error.message}</p>`
@@ -1982,13 +1992,20 @@ async function renderApprovalsPage() {
     return '<span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-bold">รอการอนุมัติ</span>'
   }
 
+  const roleLabel = (r) => {
+    if (r === 'admin') return '<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full font-bold">Admin</span>'
+    if (r === 'teacher') return '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-bold">Mentor</span>'
+    return '<span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full font-bold">Trainee</span>'
+  }
+
   const renderRow = (u, showActions) => `
     <tr class="hover:bg-slate-50 border-b border-slate-100">
       <td class="p-4">
         <p class="font-bold text-slate-800 text-sm">${escapeHtml(u.full_name || '-')}</p>
         <p class="text-xs text-slate-400">${escapeHtml(u.school_name || '-')}</p>
       </td>
-      <td class="p-4 text-xs text-slate-500">${escapeHtml(u.id)}</td>
+      <td class="p-4 text-xs text-slate-500">${escapeHtml(u.email || '-')}</td>
+      <td class="p-4">${roleLabel(u.role)}</td>
       <td class="p-4 text-center">${statusBadge(u.status)}</td>
       <td class="p-4">
         <div class="flex gap-2 justify-end">
@@ -2016,7 +2033,7 @@ async function renderApprovalsPage() {
       </div>
       <table class="w-full text-left text-sm">
         <thead class="text-slate-600 font-bold border-b border-amber-200">
-          <tr><th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">User ID</th><th class="p-4 text-center">สถานะ</th><th class="p-4"></th></tr>
+          <tr><th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">อีเมล</th><th class="p-4">บทบาท</th><th class="p-4 text-center">สถานะ</th><th class="p-4"></th></tr>
         </thead>
         <tbody>${pending.map(u => renderRow(u, true)).join('')}</tbody>
       </table>
@@ -2029,7 +2046,7 @@ async function renderApprovalsPage() {
       ${others.length > 0 ? `
       <table class="w-full text-left text-sm text-slate-600">
         <thead class="text-slate-700 font-bold border-b border-slate-200 bg-slate-50">
-          <tr><th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">User ID</th><th class="p-4 text-center">สถานะ</th><th class="p-4"></th></tr>
+          <tr><th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">อีเมล</th><th class="p-4">บทบาท</th><th class="p-4 text-center">สถานะ</th><th class="p-4"></th></tr>
         </thead>
         <tbody>${others.map(u => renderRow(u, u.status === 'rejected')).join('')}</tbody>
       </table>` : '<p class="text-center text-slate-400 py-8">ยังไม่มีสมาชิก</p>'}
@@ -2039,16 +2056,14 @@ async function renderApprovalsPage() {
 }
 
 window.approveUser = async (userId) => {
-  const { error } = await supabase.from('users_profile')
-    .update({ status: 'approved' }).eq('id', userId)
+  const { error } = await supabase.rpc('update_profile_status', { target_id: userId, new_status: 'approved' })
   if (error) { alert('อนุมัติไม่สำเร็จ: ' + error.message); return }
   renderApprovalsPage()
 }
 
 window.rejectUser = async (userId) => {
   if (!confirm('ต้องการปฏิเสธผู้ใช้งานนี้ใช่หรือไม่?')) return
-  const { error } = await supabase.from('users_profile')
-    .update({ status: 'rejected' }).eq('id', userId)
+  const { error } = await supabase.rpc('update_profile_status', { target_id: userId, new_status: 'rejected' })
   if (error) { alert('ปฏิเสธไม่สำเร็จ: ' + error.message); return }
   renderApprovalsPage()
 }

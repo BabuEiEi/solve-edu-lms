@@ -73,33 +73,39 @@
         </div>
         
         <nav class="flex-1 overflow-y-auto py-4 overflow-x-hidden">
-          <div class="px-3 space-y-1">
-            <button onclick="loadContent('profile')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group mb-2 border border-slate-100">
-              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">👤</span>
-              <span class="sidebar-text ml-3 whitespace-nowrap">จัดการโปรไฟล์</span>
-            </button>
-            <button onclick="loadContent('guidelines')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
-              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📋</span><span class="sidebar-text ml-3 whitespace-nowrap">แนวปฏิบัติ</span>
-            </button>
-            <button onclick="loadContent('pretest')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
-              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📝</span><span class="sidebar-text ml-3 whitespace-nowrap">ทดสอบก่อนเรียน</span>
-            </button>
+
+          <!-- เมนูสำหรับ User -->
+          <div id="userMenuWrapper" class="space-y-1">
+            <div class="px-3 space-y-1">
+              <button onclick="loadContent('profile')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group mb-2 border border-slate-100">
+                <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">👤</span>
+                <span class="sidebar-text ml-3 whitespace-nowrap">จัดการโปรไฟล์</span>
+              </button>
+              <button onclick="loadContent('guidelines')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+                <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📋</span><span class="sidebar-text ml-3 whitespace-nowrap">แนวปฏิบัติ</span>
+              </button>
+              <button onclick="loadContent('pretest')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+                <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📝</span><span class="sidebar-text ml-3 whitespace-nowrap">ทดสอบก่อนเรียน</span>
+              </button>
+            </div>
+
+            <div class="sidebar-text mt-6 mb-2 px-5 whitespace-nowrap"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">หน่วยการเรียน</p></div>
+            <div id="courseNavList" class="px-3 space-y-1"><p class="text-xs text-slate-400 text-center py-4">⏳...</p></div>
+
+            <div class="sidebar-text mt-6 mb-2 px-5 whitespace-nowrap"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ประเมินผล</p></div>
+            <div class="px-3 space-y-1">
+              <button onclick="loadContent('posttest')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+                <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">🏆</span><span class="sidebar-text ml-3 whitespace-nowrap">ทดสอบหลังเรียน</span>
+              </button>
+              <button onclick="loadContent('submission')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+                <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📤</span><span class="sidebar-text ml-3 whitespace-nowrap">ส่งภาระงาน</span>
+              </button>
+            </div>
           </div>
 
-          <div class="sidebar-text mt-6 mb-2 px-5 whitespace-nowrap"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">หน่วยการเรียน</p></div>
-          <div id="courseNavList" class="px-3 space-y-1"><p class="text-xs text-slate-400 text-center py-4">⏳...</p></div>
-
-          <div class="sidebar-text mt-6 mb-2 px-5 whitespace-nowrap"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ประเมินผล</p></div>
-          <div class="px-3 space-y-1">
-            <button onclick="loadContent('posttest')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
-              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">🏆</span><span class="sidebar-text ml-3 whitespace-nowrap">ทดสอบหลังเรียน</span>
-            </button>
-            <button onclick="loadContent('submission')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
-              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📤</span><span class="sidebar-text ml-3 whitespace-nowrap">ส่งภาระงาน</span>
-            </button>
-          </div>
-
-          <div id="adminMenuWrapper" class="hidden mt-6 px-3 border-t border-slate-200 pt-4 space-y-1">
+          <!-- เมนูสำหรับ Admin -->
+          <div id="adminMenuWrapper" class="hidden px-3 space-y-1">
+            <div class="sidebar-text mb-2 px-2 whitespace-nowrap"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">การจัดการ</p></div>
             <button onclick="loadContent('approvals')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition group">
               <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">✅</span><span class="sidebar-text ml-3 whitespace-nowrap">อนุมัติผู้อบรม</span>
             </button>
@@ -110,6 +116,7 @@
               <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📝</span><span class="sidebar-text ml-3 whitespace-nowrap">จัดการคำถาม</span>
             </button>
           </div>
+
         </nav>
 
         <div class="p-3 border-t border-slate-200">
