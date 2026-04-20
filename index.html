@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SolveEdu LMS</title>
+  </head>
+  <body class="bg-slate-100 font-sans text-slate-800 overflow-hidden">
+    
+    <div id="loginSection" class="flex items-center justify-center min-h-screen py-8 transition-all duration-500">
+      <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm">
+        <div class="text-center mb-6">
+          <h1 class="text-3xl font-extrabold text-blue-600">SolveEdu</h1>
+          <p class="text-gray-500 mt-2 text-sm" id="authSubtitle">เข้าสู่ระบบเพื่อเริ่มการเรียนรู้</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginFormSection">
+          <form id="loginForm" class="space-y-4">
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">อีเมล</label><input type="email" id="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label><input type="password" id="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"></div>
+            <button type="submit" id="signInBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">เข้าสู่ระบบด้วยอีเมล</button>
+          </form>
+          <div class="mt-4 flex items-center justify-between"><span class="border-b w-1/5"></span><span class="text-xs text-slate-500 uppercase">หรือ</span><span class="border-b w-1/5"></span></div>
+          <button id="googleLoginBtn" class="mt-4 w-full flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-lg transition duration-300">
+            <svg class="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            เข้าสู่ระบบด้วย Google
+          </button>
+          <p class="mt-4 text-center text-sm text-slate-500">ยังไม่มีบัญชี? <button onclick="showRegisterForm()" class="text-blue-600 font-bold hover:underline">สมัครสมาชิก</button></p>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerFormSection" class="hidden">
+          <form id="registerForm" class="space-y-4">
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ - นามสกุล *</label><input type="text" id="reg_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">โรงเรียน / หน่วยงาน *</label><input type="text" id="reg_school" required class="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">อีเมล *</label><input type="email" id="reg_email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน (อย่างน้อย 6 ตัวอักษร) *</label><input type="password" id="reg_password" required minlength="6" class="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"></div>
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg">สมัครสมาชิก</button>
+          </form>
+          <p class="mt-4 text-center text-sm text-slate-500">มีบัญชีแล้ว? <button onclick="showLoginForm()" class="text-blue-600 font-bold hover:underline">เข้าสู่ระบบ</button></p>
+        </div>
+
+        <p id="authStatus" class="mt-4 text-center text-sm font-medium"></p>
+      </div>
+    </div>
+
+    <div id="mainAppSection" class="hidden h-screen w-full flex bg-slate-50 relative">
+      
+      <aside id="appSidebar" class="w-72 bg-white border-r border-slate-200 flex flex-col h-full shadow-sm z-20 transition-all duration-300 relative">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <div class="w-10 h-10 shrink-0 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-inner">S</div>
+            <div class="sidebar-text whitespace-nowrap transition-opacity duration-300">
+              <h1 class="text-xl font-extrabold text-slate-800 leading-tight">SolveEdu</h1>
+              <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">LMS</p>
+            </div>
+          </div>
+          <button id="toggleSidebarBtn" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+        </div>
+
+        <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-3 overflow-hidden">
+          <div id="sidebarAvatar" class="w-8 h-8 shrink-0 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold overflow-hidden">👤</div>
+          <div class="sidebar-text whitespace-nowrap transition-opacity duration-300">
+            <p class="text-xs text-slate-500 mb-0.5">ผู้อบรม</p>
+            <p id="userEmailDisplay" class="text-xs font-bold text-slate-800 truncate w-44"></p>
+          </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-4 overflow-x-hidden">
+          <div class="px-3 space-y-1">
+            <button onclick="loadContent('profile')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group mb-2 border border-slate-100">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">👤</span>
+              <span class="sidebar-text ml-3 whitespace-nowrap">จัดการโปรไฟล์</span>
+            </button>
+            <button onclick="loadContent('guidelines')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📋</span><span class="sidebar-text ml-3 whitespace-nowrap">แนวปฏิบัติ</span>
+            </button>
+            <button onclick="loadContent('pretest')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📝</span><span class="sidebar-text ml-3 whitespace-nowrap">ทดสอบก่อนเรียน</span>
+            </button>
+          </div>
+
+          <div class="sidebar-text mt-6 mb-2 px-5 whitespace-nowrap"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">หน่วยการเรียน</p></div>
+          <div id="courseNavList" class="px-3 space-y-1"><p class="text-xs text-slate-400 text-center py-4">⏳...</p></div>
+
+          <div class="sidebar-text mt-6 mb-2 px-5 whitespace-nowrap"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ประเมินผล</p></div>
+          <div class="px-3 space-y-1">
+            <button onclick="loadContent('posttest')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">🏆</span><span class="sidebar-text ml-3 whitespace-nowrap">ทดสอบหลังเรียน</span>
+            </button>
+            <button onclick="loadContent('submission')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📤</span><span class="sidebar-text ml-3 whitespace-nowrap">ส่งภาระงาน</span>
+            </button>
+          </div>
+
+          <div id="adminMenuWrapper" class="hidden mt-6 px-3 border-t border-slate-200 pt-4 space-y-1">
+            <button onclick="loadContent('approvals')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">✅</span><span class="sidebar-text ml-3 whitespace-nowrap">อนุมัติผู้อบรม</span>
+            </button>
+            <button onclick="loadContent('admin')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">⚙️</span><span class="sidebar-text ml-3 whitespace-nowrap">จัดการรายวิชา</span>
+            </button>
+            <button onclick="loadContent('quizAdmin')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📝</span><span class="sidebar-text ml-3 whitespace-nowrap">จัดการคำถาม</span>
+            </button>
+          </div>
+        </nav>
+
+        <div class="p-3 border-t border-slate-200">
+          <button type="button" id="logoutBtn" class="w-full flex items-center p-2.5 rounded-lg text-sm font-bold text-red-600 bg-red-50 hover:bg-red-100 transition justify-center overflow-hidden">
+            <span class="text-xl w-6 text-center shrink-0">🚪</span><span class="sidebar-text ml-2 whitespace-nowrap">ออกจากระบบ</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 relative">
+        <div id="contentArea" class="flex-1 overflow-y-auto p-6 md:p-10"></div>
+      </main>
+
+    </div>
+
+    <div id="adminModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+          <h2 id="modalFormTitle" class="text-2xl font-bold text-slate-800">เพิ่มรายวิชาใหม่</h2>
+          <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1">
+          <form id="courseForm" class="grid grid-cols-2 gap-4">
+            <div class="col-span-2 md:col-span-1">
+              <label class="block text-xs font-bold text-slate-500 mb-1">รหัสวิชา (ห้ามซ้ำ)*</label>
+              <input type="text" id="frm_id" required class="w-full p-2 border rounded-lg outline-none focus:border-indigo-500">
+            </div>
+            <div class="col-span-2 md:col-span-1">
+              <label class="block text-xs font-bold text-slate-500 mb-1">สถานะ</label>
+              <select id="frm_status" class="w-full p-2 border rounded-lg outline-none focus:border-indigo-500">
+                <option value="เปิดสอน">เปิดสอน</option>
+                <option value="ปิดปรับปรุง">ปิดปรับปรุง</option>
+              </select>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-bold text-slate-500 mb-1">ชื่อวิชา*</label>
+              <input type="text" id="frm_name" required class="w-full p-2 border rounded-lg outline-none focus:border-indigo-500">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-bold text-slate-500 mb-1">ชื่อผู้สอน</label>
+              <input type="text" id="frm_instructor" class="w-full p-2 border rounded-lg outline-none focus:border-indigo-500">
+            </div>
+            <div class="col-span-2 md:col-span-1">
+              <label class="block text-xs font-bold text-slate-500 mb-1">ลิงก์วิดีโอ (YouTube Embed)</label>
+              <input type="text" id="frm_video" placeholder="https://www.youtube.com/embed/..." class="w-full p-2 border rounded-lg outline-none focus:border-indigo-500">
+            </div>
+            <div class="col-span-2 md:col-span-1">
+              <label class="block text-xs font-bold text-slate-500 mb-1">ลิงก์เอกสาร/ควิซ (Drive/Forms)</label>
+              <input type="text" id="frm_material" placeholder="https://..." class="w-full p-2 border rounded-lg outline-none focus:border-indigo-500">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-bold text-slate-500 mb-1">คำอธิบายรายวิชา</label>
+              <textarea id="frm_desc" rows="3" class="w-full p-2 border rounded-lg outline-none focus:border-indigo-500"></textarea>
+            </div>
+          </form>
+          <p id="adminFormStatus" class="mt-4 text-center text-sm font-bold"></p>
+        </div>
+        <div class="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+          <button onclick="closeAdminModal()" class="px-6 py-2 rounded-lg text-slate-600 font-bold hover:bg-slate-200">ยกเลิก</button>
+          <button onclick="saveCourseData()" class="px-6 py-2 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 flex items-center gap-2">
+            <span id="saveSpinner" class="hidden animate-spin">⏳</span> บันทึกข้อมูล
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="quizModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+          <h2 id="quizModalTitle" class="text-2xl font-bold text-slate-800">เพิ่มคำถาม</h2>
+          <button onclick="closeQuizModal()" class="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1">
+          <form id="quizForm" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-2">ใช้ใน</label>
+              <div class="flex gap-5">
+                <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="qz_type" value="pretest" checked class="accent-violet-600"> ก่อนเรียน</label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="qz_type" value="posttest" class="accent-violet-600"> หลังเรียน</label>
+                <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="radio" name="qz_type" value="both" class="accent-violet-600"> ทั้งคู่</label>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-1">รูปแบบคำถาม</label>
+              <select id="qz_qtype" onchange="renderQuizFormFields()" class="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-violet-500">
+                <option value="mcq">ปรนัย 4 ตัวเลือก</option>
+                <option value="fill">เติมคำตอบ</option>
+                <option value="matching">จับคู่</option>
+                <option value="dragdrop">เรียงลำดับ (Drag &amp; Drop)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-1">โจทย์คำถาม *</label>
+              <textarea id="qz_question" rows="3" required class="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-violet-500 resize-none"></textarea>
+            </div>
+            <div id="quizDynamicFields"></div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 mb-1">คะแนน</label>
+              <input type="number" id="qz_points" value="1" min="1" class="w-32 p-2 border border-slate-200 rounded-lg outline-none focus:border-violet-500">
+            </div>
+          </form>
+          <p id="quizFormStatus" class="mt-4 text-center text-sm font-bold"></p>
+        </div>
+        <div class="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+          <button onclick="closeQuizModal()" class="px-6 py-2 rounded-lg text-slate-600 font-bold hover:bg-slate-200">ยกเลิก</button>
+          <button onclick="saveQuizQuestion()" class="px-6 py-2 rounded-lg bg-violet-600 text-white font-bold hover:bg-violet-700">บันทึก</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video Quiz Modal (Student) -->
+    <div id="videoQuizModal" class="hidden fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div class="p-6 border-b border-slate-100 flex items-center gap-3">
+          <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-xl shrink-0">❓</div>
+          <div>
+            <p class="text-xs font-bold text-blue-600 uppercase tracking-wider">คำถามระหว่างเรียน</p>
+            <p class="text-xs text-slate-400">ตอบคำถามเพื่อดูวิดีโอต่อ</p>
+          </div>
+        </div>
+        <div class="p-6">
+          <p id="vqQuestion" class="text-slate-800 font-medium text-base leading-relaxed mb-5"></p>
+          <div id="vqOptions" class="space-y-2"></div>
+          <p id="vqFeedback" class="mt-4 text-center font-bold"></p>
+          <div class="mt-5 flex gap-3 justify-center">
+            <button id="vqSubmitBtn" onclick="submitVideoQuestion()" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-sm">ตอบ</button>
+            <button id="vqContinueBtn" onclick="continueVideo()" class="hidden px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-sm">▶ ดูวิดีโอต่อ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video Question Admin Modal -->
+    <div id="videoQuestionAdminModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+          <h2 id="vqAdminModalTitle" class="text-xl font-bold text-slate-800">เพิ่มคำถามวิดีโอ</h2>
+          <button onclick="closeVideoQuestionModal()" class="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 space-y-4">
+          <input type="hidden" id="vqAdminCourseId">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">เวลาในวิดีโอ (รูปแบบ นาที:วินาที) *</label>
+            <input type="text" id="vqAdminTimestamp" placeholder="02:30" class="w-40 p-2 border border-slate-200 rounded-lg outline-none focus:border-amber-500 font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">คำถาม *</label>
+            <textarea id="vqAdminQuestion" rows="3" class="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-amber-500 resize-none"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-2">ตัวเลือก (เลือก ● ข้างหน้าข้อที่ถูกต้อง)</label>
+            <div class="flex items-center gap-2 mb-2">
+              <input type="radio" name="vq_correct" value="A" checked class="accent-amber-600 shrink-0">
+              <span class="text-xs font-bold text-slate-500 w-5">A.</span>
+              <input type="text" id="vqopt_A" placeholder="ตัวเลือก A" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+            </div>
+            <div class="flex items-center gap-2 mb-2">
+              <input type="radio" name="vq_correct" value="B" class="accent-amber-600 shrink-0">
+              <span class="text-xs font-bold text-slate-500 w-5">B.</span>
+              <input type="text" id="vqopt_B" placeholder="ตัวเลือก B" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+            </div>
+            <div class="flex items-center gap-2 mb-2">
+              <input type="radio" name="vq_correct" value="C" class="accent-amber-600 shrink-0">
+              <span class="text-xs font-bold text-slate-500 w-5">C.</span>
+              <input type="text" id="vqopt_C" placeholder="ตัวเลือก C" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+            </div>
+            <div class="flex items-center gap-2 mb-2">
+              <input type="radio" name="vq_correct" value="D" class="accent-amber-600 shrink-0">
+              <span class="text-xs font-bold text-slate-500 w-5">D.</span>
+              <input type="text" id="vqopt_D" placeholder="ตัวเลือก D" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+            </div>
+          </div>
+          <p id="vqAdminStatus" class="text-sm font-bold text-center"></p>
+        </div>
+        <div class="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+          <button onclick="closeVideoQuestionModal()" class="px-6 py-2 rounded-lg text-slate-600 font-bold hover:bg-slate-200">ยกเลิก</button>
+          <button onclick="saveVideoQuestion()" class="px-6 py-2 rounded-lg bg-amber-500 text-white font-bold hover:bg-amber-600">บันทึก</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/style.css"></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
