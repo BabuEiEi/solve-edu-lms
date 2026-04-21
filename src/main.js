@@ -2000,7 +2000,7 @@ async function renderApprovalsPage() {
     return '<span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full font-bold">Trainee</span>'
   }
 
-  const renderRow = (u, showActions) => `
+  const renderPendingRow = (u) => `
     <tr class="hover:bg-slate-50 border-b border-slate-100">
       <td class="p-4">
         <p class="font-bold text-slate-800 text-sm">${escapeHtml(u.full_name || '-')}</p>
@@ -2011,11 +2011,32 @@ async function renderApprovalsPage() {
       <td class="p-4 text-center">${statusBadge(u.status)}</td>
       <td class="p-4">
         <div class="flex gap-2 justify-end">
-          ${showActions ? `
+          <button onclick="approveUser('${u.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-xs font-bold">อนุมัติ</button>
+          <button onclick="rejectUser('${u.id}')" class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-bold">ปฏิเสธ</button>
+          <button onclick="openEditProfileModal(${JSON.stringify(u).replace(/"/g, '&quot;')})" class="px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded text-xs font-bold">แก้ไข</button>
+        </div>
+      </td>
+    </tr>`
+
+  const renderMemberRow = (u) => `
+    <tr class="hover:bg-slate-50 border-b border-slate-100 member-row" data-id="${u.id}">
+      <td class="p-4 w-10">
+        <input type="checkbox" class="member-checkbox w-4 h-4 accent-indigo-600 cursor-pointer" data-id="${u.id}" onchange="onMemberCheckboxChange()">
+      </td>
+      <td class="p-4">
+        <p class="font-bold text-slate-800 text-sm">${escapeHtml(u.full_name || '-')}</p>
+        <p class="text-xs text-slate-400">${escapeHtml(u.school_name || '-')}</p>
+      </td>
+      <td class="p-4 text-xs text-slate-500">${escapeHtml(u.email || '-')}</td>
+      <td class="p-4">${roleLabel(u.role)}</td>
+      <td class="p-4 text-center">${statusBadge(u.status)}</td>
+      <td class="p-4">
+        <div class="flex gap-2 justify-end">
+          ${u.status === 'rejected' ? `
             <button onclick="approveUser('${u.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-xs font-bold">อนุมัติ</button>
-            <button onclick="rejectUser('${u.id}')" class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-bold">ปฏิเสธ</button>
           ` : ''}
           <button onclick="openEditProfileModal(${JSON.stringify(u).replace(/"/g, '&quot;')})" class="px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded text-xs font-bold">แก้ไข</button>
+          <button onclick="deleteUser('${u.id}', '${escapeHtml(u.full_name || 'ผู้ใช้นี้')}')" class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-bold">ลบ</button>
         </div>
       </td>
     </tr>`
@@ -2038,20 +2059,24 @@ async function renderApprovalsPage() {
         <thead class="text-slate-600 font-bold border-b border-amber-200">
           <tr><th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">อีเมล</th><th class="p-4">บทบาท</th><th class="p-4 text-center">สถานะ</th><th class="p-4"></th></tr>
         </thead>
-        <tbody>${pending.map(u => renderRow(u, true)).join('')}</tbody>
+        <tbody>${pending.map(u => renderPendingRow(u)).join('')}</tbody>
       </table>
     </div>` : '<div class="bg-white rounded-2xl border border-slate-100 p-8 text-center text-slate-400 mb-6">ไม่มีผู้อบรมรอการอนุมัติ</div>'}
 
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div class="px-6 py-3 border-b border-slate-200 bg-slate-50">
+      <div class="px-6 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
         <p class="font-bold text-slate-600 text-sm">สมาชิกทั้งหมด (${others.length} คน)</p>
+        <button id="deleteSelectedBtn" onclick="deleteSelectedUsers()" class="hidden px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition">ลบที่เลือก (<span id="selectedCount">0</span>)</button>
       </div>
       ${others.length > 0 ? `
       <table class="w-full text-left text-sm text-slate-600">
         <thead class="text-slate-700 font-bold border-b border-slate-200 bg-slate-50">
-          <tr><th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">อีเมล</th><th class="p-4">บทบาท</th><th class="p-4 text-center">สถานะ</th><th class="p-4"></th></tr>
+          <tr>
+            <th class="p-4 w-10"><input type="checkbox" id="selectAllMembers" class="w-4 h-4 accent-indigo-600 cursor-pointer" onchange="onSelectAllMembers(this.checked)"></th>
+            <th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">อีเมล</th><th class="p-4">บทบาท</th><th class="p-4 text-center">สถานะ</th><th class="p-4"></th>
+          </tr>
         </thead>
-        <tbody>${others.map(u => renderRow(u, u.status === 'rejected')).join('')}</tbody>
+        <tbody>${others.map(u => renderMemberRow(u)).join('')}</tbody>
       </table>` : '<p class="text-center text-slate-400 py-8">ยังไม่มีสมาชิก</p>'}
     </div>
   `
@@ -2068,6 +2093,45 @@ window.rejectUser = async (userId) => {
   if (!confirm('ต้องการปฏิเสธผู้ใช้งานนี้ใช่หรือไม่?')) return
   const { error } = await supabase.rpc('update_profile_status', { target_id: userId, new_status: 'rejected' })
   if (error) { alert('ปฏิเสธไม่สำเร็จ: ' + error.message); return }
+  renderApprovalsPage()
+}
+
+window.onMemberCheckboxChange = () => {
+  const checked = document.querySelectorAll('.member-checkbox:checked')
+  const btn = document.getElementById('deleteSelectedBtn')
+  const countEl = document.getElementById('selectedCount')
+  if (!btn || !countEl) return
+  countEl.textContent = checked.length
+  btn.classList.toggle('hidden', checked.length === 0)
+
+  const all = document.querySelectorAll('.member-checkbox')
+  const selectAll = document.getElementById('selectAllMembers')
+  if (selectAll) selectAll.checked = all.length > 0 && checked.length === all.length
+}
+
+window.onSelectAllMembers = (checked) => {
+  document.querySelectorAll('.member-checkbox').forEach(cb => { cb.checked = checked })
+  window.onMemberCheckboxChange()
+}
+
+window.deleteUser = async (userId, name) => {
+  if (!confirm(`ต้องการลบ "${name}" ออกจากระบบใช่หรือไม่?\nการลบจะไม่สามารถกู้คืนได้`)) return
+  const { error } = await supabase.rpc('delete_profile', { target_id: userId })
+  if (error) { alert('ลบไม่สำเร็จ: ' + error.message); return }
+  renderApprovalsPage()
+}
+
+window.deleteSelectedUsers = async () => {
+  const checked = [...document.querySelectorAll('.member-checkbox:checked')]
+  if (checked.length === 0) return
+  if (!confirm(`ต้องการลบสมาชิก ${checked.length} คน ออกจากระบบใช่หรือไม่?\nการลบจะไม่สามารถกู้คืนได้`)) return
+
+  let failed = 0
+  for (const cb of checked) {
+    const { error } = await supabase.rpc('delete_profile', { target_id: cb.dataset.id })
+    if (error) failed++
+  }
+  if (failed > 0) alert(`ลบไม่สำเร็จ ${failed} รายการ`)
   renderApprovalsPage()
 }
 

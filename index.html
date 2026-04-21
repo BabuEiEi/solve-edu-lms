@@ -53,15 +53,15 @@
     <div id="mainAppSection" class="hidden h-screen w-full flex bg-slate-50 relative">
       
       <aside id="appSidebar" class="w-72 bg-white border-r border-slate-200 flex flex-col h-full shadow-sm z-20 transition-all duration-300 relative">
-        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div class="flex items-center gap-3 overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between min-w-0">
+          <div class="sidebar-text flex items-center gap-3 overflow-hidden transition-opacity duration-300">
             <div class="w-10 h-10 shrink-0 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-inner">S</div>
-            <div class="sidebar-text whitespace-nowrap transition-opacity duration-300">
+            <div class="whitespace-nowrap">
               <h1 class="text-xl font-extrabold text-slate-800 leading-tight">SolveEdu</h1>
               <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">LMS</p>
             </div>
           </div>
-          <button id="toggleSidebarBtn" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+          <button id="toggleSidebarBtn" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition shrink-0 ml-auto"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
         </div>
 
         <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-3 overflow-hidden">
