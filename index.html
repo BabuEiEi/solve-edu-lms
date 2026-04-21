@@ -282,49 +282,80 @@
 
     <!-- Video Question Admin Modal -->
     <div id="videoQuestionAdminModal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col">
-        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col">
+        <div class="p-5 border-b border-slate-100 flex justify-between items-center shrink-0">
           <h2 id="vqAdminModalTitle" class="text-xl font-bold text-slate-800">เพิ่มคำถามวิดีโอ</h2>
-          <button onclick="closeVideoQuestionModal()" class="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+          <button onclick="closeVideoQuestionModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">✕</button>
         </div>
-        <div class="p-6 overflow-y-auto flex-1 space-y-4">
-          <input type="hidden" id="vqAdminCourseId">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-1">เวลาในวิดีโอ (รูปแบบ นาที:วินาที) *</label>
-            <input type="text" id="vqAdminTimestamp" placeholder="02:30" class="w-40 p-2 border border-slate-200 rounded-lg outline-none focus:border-amber-500 font-mono">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-1">คำถาม *</label>
-            <textarea id="vqAdminQuestion" rows="3" class="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-amber-500 resize-none"></textarea>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-2">ตัวเลือก (เลือก ● ข้างหน้าข้อที่ถูกต้อง)</label>
-            <div class="flex items-center gap-2 mb-2">
-              <input type="radio" name="vq_correct" value="A" checked class="accent-amber-600 shrink-0">
-              <span class="text-xs font-bold text-slate-500 w-5">A.</span>
-              <input type="text" id="vqopt_A" placeholder="ตัวเลือก A" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+        <div class="flex flex-1 overflow-hidden">
+
+          <!-- ฝั่งซ้าย: Preview วิดีโอ -->
+          <div class="w-1/2 border-r border-slate-100 flex flex-col bg-slate-900 rounded-bl-2xl overflow-hidden">
+            <div class="flex-1 flex items-center justify-center relative">
+              <div id="vqPreviewPlaceholder" class="flex flex-col items-center justify-center gap-3 text-slate-400 py-16">
+                <span class="text-5xl">🎬</span>
+                <p class="text-sm font-medium">ไม่มีลิงก์วิดีโอสำหรับรายวิชานี้</p>
+              </div>
+              <iframe id="vqPreviewIframe"
+                class="hidden w-full aspect-video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen>
+              </iframe>
             </div>
-            <div class="flex items-center gap-2 mb-2">
-              <input type="radio" name="vq_correct" value="B" class="accent-amber-600 shrink-0">
-              <span class="text-xs font-bold text-slate-500 w-5">B.</span>
-              <input type="text" id="vqopt_B" placeholder="ตัวเลือก B" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
-            </div>
-            <div class="flex items-center gap-2 mb-2">
-              <input type="radio" name="vq_correct" value="C" class="accent-amber-600 shrink-0">
-              <span class="text-xs font-bold text-slate-500 w-5">C.</span>
-              <input type="text" id="vqopt_C" placeholder="ตัวเลือก C" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
-            </div>
-            <div class="flex items-center gap-2 mb-2">
-              <input type="radio" name="vq_correct" value="D" class="accent-amber-600 shrink-0">
-              <span class="text-xs font-bold text-slate-500 w-5">D.</span>
-              <input type="text" id="vqopt_D" placeholder="ตัวเลือก D" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+            <div class="p-4 bg-slate-800 flex items-center gap-3">
+              <div class="flex-1">
+                <p class="text-xs text-slate-400 mb-1">เวลาปัจจุบันในวิดีโอ</p>
+                <p id="vqCurrentTime" class="text-lg font-mono font-bold text-amber-400">00:00</p>
+              </div>
+              <button onclick="vqCaptureTime()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold rounded-lg transition">
+                ⏱ ใช้เวลานี้
+              </button>
             </div>
           </div>
-          <p id="vqAdminStatus" class="text-sm font-bold text-center"></p>
-        </div>
-        <div class="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-          <button onclick="closeVideoQuestionModal()" class="px-6 py-2 rounded-lg text-slate-600 font-bold hover:bg-slate-200">ยกเลิก</button>
-          <button onclick="saveVideoQuestion()" class="px-6 py-2 rounded-lg bg-amber-500 text-white font-bold hover:bg-amber-600">บันทึก</button>
+
+          <!-- ฝั่งขวา: ฟอร์มคำถาม -->
+          <div class="w-1/2 flex flex-col overflow-hidden">
+            <div class="p-5 overflow-y-auto flex-1 space-y-4">
+              <input type="hidden" id="vqAdminCourseId">
+              <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1">เวลาในวิดีโอ (รูปแบบ นาที:วินาที) *</label>
+                <input type="text" id="vqAdminTimestamp" placeholder="02:30" class="w-36 p-2 border border-slate-200 rounded-lg outline-none focus:border-amber-500 font-mono text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1">คำถาม *</label>
+                <textarea id="vqAdminQuestion" rows="3" class="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-amber-500 resize-none text-sm"></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-500 mb-2">ตัวเลือก (เลือก ● ข้างหน้าข้อที่ถูกต้อง)</label>
+                <div class="flex items-center gap-2 mb-2">
+                  <input type="radio" name="vq_correct" value="A" checked class="accent-amber-600 shrink-0">
+                  <span class="text-xs font-bold text-slate-500 w-5">A.</span>
+                  <input type="text" id="vqopt_A" placeholder="ตัวเลือก A" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+                </div>
+                <div class="flex items-center gap-2 mb-2">
+                  <input type="radio" name="vq_correct" value="B" class="accent-amber-600 shrink-0">
+                  <span class="text-xs font-bold text-slate-500 w-5">B.</span>
+                  <input type="text" id="vqopt_B" placeholder="ตัวเลือก B" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+                </div>
+                <div class="flex items-center gap-2 mb-2">
+                  <input type="radio" name="vq_correct" value="C" class="accent-amber-600 shrink-0">
+                  <span class="text-xs font-bold text-slate-500 w-5">C.</span>
+                  <input type="text" id="vqopt_C" placeholder="ตัวเลือก C" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+                </div>
+                <div class="flex items-center gap-2 mb-2">
+                  <input type="radio" name="vq_correct" value="D" class="accent-amber-600 shrink-0">
+                  <span class="text-xs font-bold text-slate-500 w-5">D.</span>
+                  <input type="text" id="vqopt_D" placeholder="ตัวเลือก D" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-amber-500">
+                </div>
+              </div>
+              <p id="vqAdminStatus" class="text-sm font-bold text-center"></p>
+            </div>
+            <div class="p-5 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 shrink-0 rounded-br-2xl">
+              <button onclick="closeVideoQuestionModal()" class="px-6 py-2 rounded-lg text-slate-600 font-bold hover:bg-slate-200">ยกเลิก</button>
+              <button onclick="saveVideoQuestion()" class="px-6 py-2 rounded-lg bg-amber-500 text-white font-bold hover:bg-amber-600">บันทึก</button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

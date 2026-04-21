@@ -1915,7 +1915,8 @@ async function renderVideoAdminPage(course) {
 
 window.openVideoQuestionModal = (questionData, courseId) => {
   editingVideoQuestionId = questionData?.id || null
-  document.getElementById('vqAdminCourseId').value = courseId || questionData?.course_id || ''
+  const cid = courseId || questionData?.course_id || ''
+  document.getElementById('vqAdminCourseId').value = cid
   document.getElementById('vqAdminModalTitle').textContent = questionData ? 'แก้ไขคำถามวิดีโอ' : 'เพิ่มคำถามวิดีโอ'
   document.getElementById('vqAdminStatus').textContent = ''
 
@@ -1934,6 +1935,38 @@ window.openVideoQuestionModal = (questionData, courseId) => {
   const radio = document.querySelector(`input[name="vq_correct"][value="${correctLabel}"]`)
   if (radio) radio.checked = true
 
+  // ตั้ง preview วิดีโอ
+  const course = globalCourses.find(c => c.course_id === cid)
+  const videoUrl = course?.video_url || ''
+  const iframe = document.getElementById('vqPreviewIframe')
+  const placeholder = document.getElementById('vqPreviewPlaceholder')
+  const currentTimeEl = document.getElementById('vqCurrentTime')
+  currentTimeEl.textContent = '00:00'
+
+  // แปลง YouTube embed URL ให้มี enablejsapi=1
+  if (videoUrl) {
+    let embedUrl = videoUrl
+    if (!embedUrl.includes('enablejsapi')) {
+      embedUrl += (embedUrl.includes('?') ? '&' : '?') + 'enablejsapi=1&origin=' + encodeURIComponent(window.location.origin)
+    }
+    iframe.src = embedUrl
+    iframe.classList.remove('hidden')
+    placeholder.classList.add('hidden')
+
+    // polling เวลาจาก YouTube iframe API
+    if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
+    window._vqTimeInterval = setInterval(() => {
+      try {
+        iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'getCurrentTime', args: [] }), '*')
+      } catch (_) {}
+    }, 500)
+  } else {
+    iframe.src = ''
+    iframe.classList.add('hidden')
+    placeholder.classList.remove('hidden')
+    if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
+  }
+
   document.getElementById('videoQuestionAdminModal').classList.remove('hidden')
 }
 
@@ -1945,6 +1978,28 @@ window.editVideoQuestion = async (id) => {
 
 window.closeVideoQuestionModal = () => {
   document.getElementById('videoQuestionAdminModal').classList.add('hidden')
+  if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
+  const iframe = document.getElementById('vqPreviewIframe')
+  if (iframe) iframe.src = ''
+}
+
+// รับเวลาจาก YouTube iframe API via postMessage
+window.addEventListener('message', (e) => {
+  try {
+    const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
+    if (data?.event === 'infoDelivery' && data?.info?.currentTime !== undefined) {
+      const sec = Math.floor(data.info.currentTime)
+      const mm = String(Math.floor(sec / 60)).padStart(2, '0')
+      const ss = String(sec % 60).padStart(2, '0')
+      const el = document.getElementById('vqCurrentTime')
+      if (el) el.textContent = `${mm}:${ss}`
+    }
+  } catch (_) {}
+})
+
+window.vqCaptureTime = () => {
+  const timeText = document.getElementById('vqCurrentTime')?.textContent || '00:00'
+  document.getElementById('vqAdminTimestamp').value = timeText
 }
 
 window.saveVideoQuestion = async () => {
