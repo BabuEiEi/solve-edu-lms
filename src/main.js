@@ -24,6 +24,7 @@ let quizDragDropItemCount = 3
 let currentQuizQuestions = []
 let ytPlayer = null
 let maxReachedTime = 0
+let vqPlayer = null
 let videoQuestionsForCourse = []
 let answeredVideoQuestions = new Set()
 let videoCheckInterval = null
@@ -1935,39 +1936,100 @@ window.openVideoQuestionModal = (questionData, courseId) => {
   const radio = document.querySelector(`input[name="vq_correct"][value="${correctLabel}"]`)
   if (radio) radio.checked = true
 
-  // ตั้ง preview วิดีโอ
+  document.getElementById('videoQuestionAdminModal').classList.remove('hidden')
+
+  // โหลด preview วิดีโอ
   const course = globalCourses.find(c => c.course_id === cid)
-  const videoUrl = course?.video_url || ''
-  const iframe = document.getElementById('vqPreviewIframe')
+  initVQPreview(course?.video_url || '')
+}
+
+function getYouTubeVideoId(url) {
+  if (!url) return null
+  const embedMatch = url.match(/youtube\.com\/embed\/([^?&/]+)/)
+  if (embedMatch) return embedMatch[1]
+  const watchMatch = url.match(/[?&]v=([^&]+)/)
+  if (watchMatch) return watchMatch[1]
+  const shortMatch = url.match(/youtu\.be\/([^?&/]+)/)
+  if (shortMatch) return shortMatch[1]
+  return null
+}
+
+function initVQPreview(videoUrl) {
   const placeholder = document.getElementById('vqPreviewPlaceholder')
-  const currentTimeEl = document.getElementById('vqCurrentTime')
-  currentTimeEl.textContent = '00:00'
+  const playerContainer = document.getElementById('vqPlayerContainer')
+  const timeEl = document.getElementById('vqCurrentTime')
+  const durEl = document.getElementById('vqDuration')
+  const slider = document.getElementById('vqTimeSlider')
 
-  // แปลง YouTube embed URL ให้มี enablejsapi=1
-  if (videoUrl) {
-    let embedUrl = videoUrl
-    if (!embedUrl.includes('enablejsapi')) {
-      embedUrl += (embedUrl.includes('?') ? '&' : '?') + 'enablejsapi=1&origin=' + encodeURIComponent(window.location.origin)
-    }
-    iframe.src = embedUrl
-    iframe.classList.remove('hidden')
-    placeholder.classList.add('hidden')
+  if (timeEl) timeEl.textContent = '00:00'
+  if (durEl) durEl.textContent = '/ --:--'
+  if (slider) { slider.max = 100; slider.value = 0 }
 
-    // polling เวลาจาก YouTube iframe API
-    if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
-    window._vqTimeInterval = setInterval(() => {
-      try {
-        iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'getCurrentTime', args: [] }), '*')
-      } catch (_) {}
-    }, 500)
-  } else {
-    iframe.src = ''
-    iframe.classList.add('hidden')
-    placeholder.classList.remove('hidden')
-    if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
+  if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
+  if (vqPlayer) { try { vqPlayer.destroy() } catch (_) {} vqPlayer = null }
+
+  const videoId = getYouTubeVideoId(videoUrl)
+  if (!videoId) {
+    placeholder?.classList.remove('hidden')
+    playerContainer?.classList.add('hidden')
+    return
   }
 
-  document.getElementById('videoQuestionAdminModal').classList.remove('hidden')
+  placeholder?.classList.add('hidden')
+  playerContainer?.classList.remove('hidden')
+  playerContainer.innerHTML = '<div id="vqYTPlayer"></div>'
+
+  function createVQPlayer() {
+    vqPlayer = new window.YT.Player('vqYTPlayer', {
+      videoId,
+      width: '100%',
+      height: '100%',
+      playerVars: { controls: 1, rel: 0, modestbranding: 1 },
+      events: { onReady: startVQPolling }
+    })
+  }
+
+  if (window.YT && window.YT.Player) {
+    createVQPlayer()
+  } else {
+    window._vqPendingCreate = createVQPlayer
+    if (!document.getElementById('ytApiScript')) {
+      const s = document.createElement('script')
+      s.id = 'ytApiScript'
+      s.src = 'https://www.youtube.com/iframe_api'
+      document.head.appendChild(s)
+    }
+    const prevReady = window.onYouTubeIframeAPIReady
+    window.onYouTubeIframeAPIReady = () => {
+      if (prevReady) prevReady()
+      if (window._vqPendingCreate) { window._vqPendingCreate(); window._vqPendingCreate = null }
+    }
+  }
+}
+
+function startVQPolling() {
+  if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
+  const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+
+  window._vqTimeInterval = setInterval(() => {
+    if (!vqPlayer || typeof vqPlayer.getCurrentTime !== 'function') return
+    try {
+      const sec = Math.floor(vqPlayer.getCurrentTime())
+      const dur = Math.floor(vqPlayer.getDuration()) || 0
+
+      const timeEl = document.getElementById('vqCurrentTime')
+      if (timeEl) timeEl.textContent = fmt(sec)
+
+      const durEl = document.getElementById('vqDuration')
+      if (durEl && dur > 0) durEl.textContent = `/ ${fmt(dur)}`
+
+      const slider = document.getElementById('vqTimeSlider')
+      if (slider && dur > 0) {
+        if (Number(slider.max) !== dur) slider.max = dur
+        if (!window._vqSliderDragging) slider.value = sec
+      }
+    } catch (_) {}
+  }, 300)
 }
 
 window.editVideoQuestion = async (id) => {
@@ -1979,8 +2041,20 @@ window.editVideoQuestion = async (id) => {
 window.closeVideoQuestionModal = () => {
   document.getElementById('videoQuestionAdminModal').classList.add('hidden')
   if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
-  const iframe = document.getElementById('vqPreviewIframe')
-  if (iframe) iframe.src = ''
+  if (vqPlayer) { try { vqPlayer.destroy() } catch (_) {} vqPlayer = null }
+  const container = document.getElementById('vqPlayerContainer')
+  if (container) container.innerHTML = ''
+}
+
+window.vqSeekTo = (value) => {
+  if (vqPlayer && typeof vqPlayer.seekTo === 'function') {
+    vqPlayer.seekTo(parseInt(value), true)
+  }
+}
+
+window.vqCaptureTime = () => {
+  const timeText = document.getElementById('vqCurrentTime')?.textContent || '00:00'
+  document.getElementById('vqAdminTimestamp').value = timeText
 }
 
 // รับเวลาจาก YouTube iframe API via postMessage

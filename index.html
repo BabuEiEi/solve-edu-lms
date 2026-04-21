@@ -291,25 +291,31 @@
 
           <!-- ฝั่งซ้าย: Preview วิดีโอ -->
           <div class="w-1/2 border-r border-slate-100 flex flex-col bg-slate-900 rounded-bl-2xl overflow-hidden">
-            <div class="flex-1 flex items-center justify-center relative">
+            <div id="vqPlayerArea" class="flex-1 flex items-center justify-center min-h-0 overflow-hidden">
               <div id="vqPreviewPlaceholder" class="flex flex-col items-center justify-center gap-3 text-slate-400 py-16">
                 <span class="text-5xl">🎬</span>
                 <p class="text-sm font-medium">ไม่มีลิงก์วิดีโอสำหรับรายวิชานี้</p>
               </div>
-              <iframe id="vqPreviewIframe"
-                class="hidden w-full aspect-video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen>
-              </iframe>
+              <div id="vqPlayerContainer" class="w-full hidden"></div>
             </div>
-            <div class="p-4 bg-slate-800 flex items-center gap-3">
-              <div class="flex-1">
-                <p class="text-xs text-slate-400 mb-1">เวลาปัจจุบันในวิดีโอ</p>
-                <p id="vqCurrentTime" class="text-lg font-mono font-bold text-amber-400">00:00</p>
+            <!-- Scrubber + controls -->
+            <div class="px-4 pt-3 pb-4 bg-slate-800 space-y-2">
+              <input type="range" id="vqTimeSlider" min="0" max="100" value="0"
+                class="w-full h-2 accent-amber-500 cursor-pointer"
+                onmousedown="window._vqSliderDragging=true"
+                onmouseup="vqSeekTo(this.value); window._vqSliderDragging=false"
+                ontouchstart="window._vqSliderDragging=true"
+                ontouchend="vqSeekTo(this.value); window._vqSliderDragging=false">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">เวลาปัจจุบัน</p>
+                  <p id="vqCurrentTime" class="text-xl font-mono font-bold text-amber-400 leading-none">00:00</p>
+                </div>
+                <p id="vqDuration" class="text-xs font-mono text-slate-500 self-end pb-0.5">/ --:--</p>
+                <button onclick="vqCaptureTime()" class="shrink-0 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold rounded-lg transition flex items-center gap-1.5">
+                  ⏱ ใช้เวลานี้
+                </button>
               </div>
-              <button onclick="vqCaptureTime()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold rounded-lg transition">
-                ⏱ ใช้เวลานี้
-              </button>
             </div>
           </div>
 
