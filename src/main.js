@@ -1996,6 +1996,7 @@ async function renderApprovalsPage() {
   const roleLabel = (r) => {
     if (r === 'admin') return '<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full font-bold">Admin</span>'
     if (r === 'teacher') return '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-bold">Mentor</span>'
+    if (r === 'staff') return '<span class="px-2 py-0.5 bg-teal-100 text-teal-700 text-xs rounded-full font-bold">Staff</span>'
     return '<span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full font-bold">Trainee</span>'
   }
 
@@ -2105,6 +2106,7 @@ window.openEditProfileModal = (u) => {
           <select id="epRole" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 text-sm">
             <option value="student" ${u.role === 'student' ? 'selected' : ''}>Trainee</option>
             <option value="teacher" ${u.role === 'teacher' ? 'selected' : ''}>Mentor</option>
+            <option value="staff" ${u.role === 'staff' ? 'selected' : ''}>Staff</option>
             <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
           </select>
         </div>
