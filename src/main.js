@@ -239,10 +239,18 @@ async function updateUI(session) {
     let displayRole = 'Trainee'
     if (userRole === 'admin') displayRole = 'Admin'
     else if (userRole === 'teacher') displayRole = 'Mentor'
+    else if (userRole === 'staff') displayRole = 'Staff'
+
+    const roleBadgeColor = {
+      admin: 'bg-indigo-100 text-indigo-700',
+      teacher: 'bg-blue-100 text-blue-700',
+      staff: 'bg-teal-100 text-teal-700',
+      student: 'bg-blue-100 text-blue-700'
+    }[userRole] || 'bg-blue-100 text-blue-700'
 
     userEmailDisplay.innerHTML = `
       <span class="text-slate-800 font-bold truncate block w-44">${fullName}</span>
-      <span class="mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full inline-block uppercase tracking-wider">${displayRole}</span>
+      <span class="mt-1 px-2 py-0.5 ${roleBadgeColor} text-[10px] font-bold rounded-full inline-block uppercase tracking-wider">${displayRole}</span>
     `
 
     const sidebarAvatar = document.getElementById('sidebarAvatar')
@@ -252,13 +260,21 @@ async function updateUI(session) {
       sidebarAvatar.classList.toggle('text-transparent', Boolean(avatarUrl))
     }
 
+    const allMenus = ['userMenuWrapper', 'adminMenuWrapper', 'staffMenuWrapper', 'mentorMenuWrapper']
+    allMenus.forEach(id => document.getElementById(id)?.classList.add('hidden'))
+
     if (userRole === 'admin') {
-      adminMenuWrapper.classList.remove('hidden')
-      document.getElementById('userMenuWrapper').classList.add('hidden')
+      document.getElementById('adminMenuWrapper').classList.remove('hidden')
       fetchCourses()
       window.loadContent('approvals')
+    } else if (userRole === 'staff') {
+      document.getElementById('staffMenuWrapper').classList.remove('hidden')
+      window.loadContent('staffDashboard')
+    } else if (userRole === 'teacher') {
+      document.getElementById('mentorMenuWrapper').classList.remove('hidden')
+      fetchCourses()
+      window.loadContent('mentorDashboard')
     } else {
-      adminMenuWrapper.classList.add('hidden')
       document.getElementById('userMenuWrapper').classList.remove('hidden')
       fetchCourses()
       window.loadContent('guidelines')
@@ -1106,6 +1122,22 @@ window.loadContent = (type, data = null) => {
   }
   else if (type === 'approvals') {
     renderApprovalsPage()
+    return
+  }
+  else if (type === 'staffDashboard') {
+    renderStaffDashboard()
+    return
+  }
+  else if (type === 'mentorDashboard') {
+    renderMentorDashboard()
+    return
+  }
+  else if (type === 'mentorTrainees') {
+    renderMentorTrainees()
+    return
+  }
+  else if (type === 'mentorReview') {
+    renderMentorReview()
     return
   }
 
@@ -1964,6 +1996,372 @@ window.deleteVideoQuestion = async (id, courseId) => {
   if (error) { alert('ลบไม่สำเร็จ: ' + error.message); return }
   const course = globalCourses.find(c => c.course_id === courseId)
   if (course) renderVideoAdminPage(course)
+}
+
+// ==========================================
+// ระบบ Staff Dashboard
+// ==========================================
+
+async function renderStaffDashboard() {
+  contentArea.innerHTML = ''
+  const container = document.createElement('div')
+  container.className = 'max-w-4xl mx-auto w-full animate-fade-in'
+
+  const { data: users, error } = await supabase.rpc('get_all_profiles')
+  if (error) {
+    container.innerHTML = `<p class="text-red-500 text-center py-12">โหลดข้อมูลไม่สำเร็จ: ${error.message}</p>`
+    contentArea.appendChild(container)
+    return
+  }
+
+  const pending = (users || []).filter(u => u.status === 'pending')
+  const approved = (users || []).filter(u => u.status === 'approved')
+  const rejected = (users || []).filter(u => u.status === 'rejected')
+
+  const statCard = (emoji, label, count, color) => `
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 flex items-center gap-4 shadow-sm">
+      <div class="w-14 h-14 rounded-xl ${color} flex items-center justify-center text-2xl shrink-0">${emoji}</div>
+      <div>
+        <p class="text-3xl font-extrabold text-slate-800">${count}</p>
+        <p class="text-sm text-slate-500 font-medium">${label}</p>
+      </div>
+    </div>`
+
+  const pendingRows = pending.map(u => `
+    <tr class="hover:bg-slate-50 border-b border-slate-100">
+      <td class="p-4">
+        <p class="font-bold text-slate-800 text-sm">${escapeHtml(u.full_name || '-')}</p>
+        <p class="text-xs text-slate-400">${escapeHtml(u.school_name || '-')}</p>
+      </td>
+      <td class="p-4 text-xs text-slate-500">${escapeHtml(u.email || '-')}</td>
+      <td class="p-4">
+        <div class="flex gap-2">
+          <button onclick="approveUser('${u.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-xs font-bold">อนุมัติ</button>
+          <button onclick="rejectUser('${u.id}')" class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-bold">ปฏิเสธ</button>
+        </div>
+      </td>
+    </tr>`).join('')
+
+  container.innerHTML = `
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-12 h-12 bg-teal-100 text-teal-600 rounded-xl flex items-center justify-center text-2xl">🏠</div>
+      <div>
+        <h1 class="text-3xl font-extrabold text-slate-800">ภาพรวมระบบ</h1>
+        <p class="text-sm text-slate-500">Staff Dashboard</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-8">
+      ${statCard('⏳', 'รอการอนุมัติ', pending.length, 'bg-amber-100 text-amber-600')}
+      ${statCard('✅', 'อนุมัติแล้ว', approved.length, 'bg-emerald-100 text-emerald-600')}
+      ${statCard('❌', 'ถูกปฏิเสธ', rejected.length, 'bg-red-100 text-red-600')}
+    </div>
+
+    ${pending.length > 0 ? `
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+      <div class="px-6 py-4 border-b border-slate-200 bg-amber-50 flex items-center justify-between">
+        <p class="font-bold text-amber-700 text-sm">⏳ รอการอนุมัติ (${pending.length} คน)</p>
+        <button onclick="loadContent('approvals')" class="text-xs text-amber-600 hover:text-amber-800 font-bold">ดูทั้งหมด →</button>
+      </div>
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-600 font-bold border-b border-slate-100 bg-slate-50">
+          <tr><th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">อีเมล</th><th class="p-4">การดำเนินการ</th></tr>
+        </thead>
+        <tbody>${pendingRows}</tbody>
+      </table>
+    </div>` : `
+    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center text-emerald-700 font-bold mb-6">
+      ✅ ไม่มีผู้อบรมรอการอนุมัติ
+    </div>`}
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <p class="font-bold text-slate-700 mb-1">สมาชิกทั้งหมด</p>
+      <p class="text-4xl font-extrabold text-slate-800">${(users || []).length} <span class="text-lg font-normal text-slate-400">คน</span></p>
+    </div>
+  `
+  contentArea.appendChild(container)
+}
+
+// ==========================================
+// ระบบ Mentor Dashboard
+// ==========================================
+
+async function renderMentorDashboard() {
+  contentArea.innerHTML = ''
+  const container = document.createElement('div')
+  container.className = 'max-w-4xl mx-auto w-full animate-fade-in'
+
+  const [{ data: users }, { data: results }] = await Promise.all([
+    supabase.rpc('get_all_profiles'),
+    supabase.from('quiz_results').select('user_id, quiz_type, score, passed')
+  ])
+
+  const trainees = (users || []).filter(u => u.status === 'approved' && u.role === 'student')
+  const passedIds = new Set((results || []).filter(r => r.quiz_type === 'posttest' && r.passed).map(r => r.user_id))
+  const passedCount = trainees.filter(u => passedIds.has(u.id)).length
+
+  const courseCount = globalCourses.filter(c => c.status === 'เปิดสอน').length
+
+  const statCard = (emoji, label, count, color) => `
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 flex items-center gap-4 shadow-sm">
+      <div class="w-14 h-14 rounded-xl ${color} flex items-center justify-center text-2xl shrink-0">${emoji}</div>
+      <div>
+        <p class="text-3xl font-extrabold text-slate-800">${count}</p>
+        <p class="text-sm text-slate-500 font-medium">${label}</p>
+      </div>
+    </div>`
+
+  const recentTrainees = trainees.slice(0, 5).map(u => {
+    const passed = passedIds.has(u.id)
+    return `
+    <tr class="hover:bg-slate-50 border-b border-slate-100">
+      <td class="p-4">
+        <p class="font-bold text-slate-800 text-sm">${escapeHtml(u.full_name || '-')}</p>
+        <p class="text-xs text-slate-400">${escapeHtml(u.school_name || '-')}</p>
+      </td>
+      <td class="p-4 text-xs text-slate-500">${escapeHtml(u.email || '-')}</td>
+      <td class="p-4 text-center">
+        ${passed
+          ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">ผ่านแล้ว</span>'
+          : '<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs rounded-full font-bold">ยังไม่ผ่าน</span>'}
+      </td>
+    </tr>`
+  }).join('')
+
+  container.innerHTML = `
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl">🏠</div>
+      <div>
+        <h1 class="text-3xl font-extrabold text-slate-800">ภาพรวม</h1>
+        <p class="text-sm text-slate-500">Mentor Dashboard</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-4 mb-8">
+      ${statCard('👥', 'ผู้อบรมที่อนุมัติแล้ว', trainees.length, 'bg-blue-100 text-blue-600')}
+      ${statCard('🏆', 'ผ่านแบบทดสอบหลังเรียน', passedCount, 'bg-emerald-100 text-emerald-600')}
+      ${statCard('📚', 'รายวิชาที่เปิดสอน', courseCount, 'bg-violet-100 text-violet-600')}
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+        <p class="font-bold text-slate-700 text-sm">ผู้อบรมล่าสุด</p>
+        <button onclick="loadContent('mentorTrainees')" class="text-xs text-blue-600 hover:text-blue-800 font-bold">ดูทั้งหมด →</button>
+      </div>
+      ${trainees.length > 0 ? `
+      <table class="w-full text-left text-sm text-slate-600">
+        <thead class="text-slate-700 font-bold border-b border-slate-200 bg-slate-50">
+          <tr><th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">อีเมล</th><th class="p-4 text-center">สถานะ Posttest</th></tr>
+        </thead>
+        <tbody>${recentTrainees}</tbody>
+      </table>` : '<p class="text-center text-slate-400 py-8">ยังไม่มีผู้อบรม</p>'}
+    </div>
+  `
+  contentArea.appendChild(container)
+}
+
+async function renderMentorTrainees() {
+  contentArea.innerHTML = ''
+  const container = document.createElement('div')
+  container.className = 'max-w-4xl mx-auto w-full animate-fade-in'
+
+  const [{ data: users }, { data: results }] = await Promise.all([
+    supabase.rpc('get_all_profiles'),
+    supabase.from('quiz_results').select('user_id, quiz_type, score, passed')
+  ])
+
+  const trainees = (users || []).filter(u => u.status === 'approved' && u.role === 'student')
+  const passedIds = new Set((results || []).filter(r => r.quiz_type === 'posttest' && r.passed).map(r => r.user_id))
+
+  const rows = trainees.map(u => {
+    const passed = passedIds.has(u.id)
+    return `
+    <tr class="hover:bg-slate-50 border-b border-slate-100">
+      <td class="p-4">
+        <p class="font-bold text-slate-800 text-sm">${escapeHtml(u.full_name || '-')}</p>
+        <p class="text-xs text-slate-400">${escapeHtml(u.school_name || '-')}</p>
+      </td>
+      <td class="p-4 text-xs text-slate-500">${escapeHtml(u.email || '-')}</td>
+      <td class="p-4 text-center">
+        ${passed
+          ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">ผ่านแล้ว</span>'
+          : '<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs rounded-full font-bold">ยังไม่ผ่าน</span>'}
+      </td>
+    </tr>`
+  }).join('')
+
+  container.innerHTML = `
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-2xl">👥</div>
+      <div>
+        <h1 class="text-3xl font-extrabold text-slate-800">ผู้อบรมทั้งหมด</h1>
+        <p class="text-sm text-slate-500">${trainees.length} คน</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      ${trainees.length > 0 ? `
+      <table class="w-full text-left text-sm text-slate-600">
+        <thead class="text-slate-700 font-bold border-b border-slate-200 bg-slate-50">
+          <tr><th class="p-4">ชื่อ / หน่วยงาน</th><th class="p-4">อีเมล</th><th class="p-4 text-center">สถานะ Posttest</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>` : '<p class="text-center text-slate-400 py-8">ยังไม่มีผู้อบรม</p>'}
+    </div>
+  `
+  contentArea.appendChild(container)
+}
+
+async function renderMentorReview() {
+  contentArea.innerHTML = ''
+  const container = document.createElement('div')
+  container.className = 'max-w-5xl mx-auto w-full animate-fade-in'
+
+  const { data: submissions, error } = await supabase.rpc('get_all_submissions')
+  if (error) {
+    container.innerHTML = `<p class="text-red-500 text-center py-12">โหลดข้อมูลไม่สำเร็จ: ${error.message}</p>`
+    contentArea.appendChild(container)
+    return
+  }
+
+  const courseMap = Object.fromEntries(globalCourses.map(c => [c.course_id, c.course_name]))
+  const pending = (submissions || []).filter(s => !s.reviewed)
+  const reviewed = (submissions || []).filter(s => s.reviewed)
+
+  const formatDate = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  const renderSubmissionRow = (s) => `
+    <tr class="hover:bg-slate-50 border-b border-slate-100">
+      <td class="p-4">
+        <p class="font-bold text-slate-800 text-sm">${escapeHtml(s.full_name || '-')}</p>
+        <p class="text-xs text-slate-400">${escapeHtml(s.school_name || '-')}</p>
+      </td>
+      <td class="p-4 text-sm text-slate-600">${escapeHtml(courseMap[s.course_id] || s.course_id)}</td>
+      <td class="p-4 text-xs text-slate-400">${formatDate(s.created_at)}</td>
+      <td class="p-4">
+        <a href="${escapeHtml(s.file_url)}" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-bold transition">
+          📎 ดาวน์โหลด
+        </a>
+      </td>
+      <td class="p-4">
+        ${s.reviewed
+          ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">ตรวจแล้ว</span>'
+          : '<span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-bold">รอตรวจ</span>'}
+      </td>
+      <td class="p-4">
+        <button onclick="openReviewModal('${s.id}', ${JSON.stringify(s.full_name || '-')}, ${JSON.stringify(courseMap[s.course_id] || s.course_id)}, ${s.reviewed}, ${JSON.stringify(s.feedback || '')})"
+          class="px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded text-xs font-bold">
+          ${s.reviewed ? 'ดูผล' : 'ตรวจงาน'}
+        </button>
+      </td>
+    </tr>`
+
+  container.innerHTML = `
+    <div class="flex items-center gap-3 mb-8">
+      <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center text-2xl">📋</div>
+      <div>
+        <h1 class="text-3xl font-extrabold text-slate-800">ตรวจงาน</h1>
+        <p class="text-sm text-slate-500">รอตรวจ ${pending.length} งาน · ตรวจแล้ว ${reviewed.length} งาน</p>
+      </div>
+    </div>
+
+    ${pending.length > 0 ? `
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+      <div class="px-6 py-4 border-b border-amber-200 bg-amber-50">
+        <p class="font-bold text-amber-700 text-sm">⏳ รอตรวจ (${pending.length} งาน)</p>
+      </div>
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-600 font-bold border-b border-slate-100 bg-slate-50">
+          <tr><th class="p-4">ผู้อบรม</th><th class="p-4">วิชา</th><th class="p-4">วันที่ส่ง</th><th class="p-4">ไฟล์งาน</th><th class="p-4">สถานะ</th><th class="p-4"></th></tr>
+        </thead>
+        <tbody>${pending.map(s => renderSubmissionRow(s)).join('')}</tbody>
+      </table>
+    </div>` : `
+    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center text-emerald-700 font-bold mb-6">
+      ✅ ไม่มีงานรอตรวจ
+    </div>`}
+
+    ${reviewed.length > 0 ? `
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
+        <p class="font-bold text-slate-600 text-sm">ตรวจแล้ว (${reviewed.length} งาน)</p>
+      </div>
+      <table class="w-full text-left text-sm">
+        <thead class="text-slate-600 font-bold border-b border-slate-100 bg-slate-50">
+          <tr><th class="p-4">ผู้อบรม</th><th class="p-4">วิชา</th><th class="p-4">วันที่ส่ง</th><th class="p-4">ไฟล์งาน</th><th class="p-4">สถานะ</th><th class="p-4"></th></tr>
+        </thead>
+        <tbody>${reviewed.map(s => renderSubmissionRow(s)).join('')}</tbody>
+      </table>
+    </div>` : ''}
+  `
+  contentArea.appendChild(container)
+}
+
+window.openReviewModal = (id, name, courseName, isReviewed, feedback) => {
+  const existing = document.getElementById('reviewModal')
+  if (existing) existing.remove()
+
+  const modal = document.createElement('div')
+  modal.id = 'reviewModal'
+  modal.className = 'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4'
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">ตรวจงาน</h2>
+          <p class="text-xs text-slate-400 mt-0.5">${escapeHtml(name)} — ${escapeHtml(courseName)}</p>
+        </div>
+        <button onclick="document.getElementById('reviewModal').remove()" class="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">ข้อเสนอแนะ / ผลการตรวจ</label>
+          <textarea id="reviewFeedback" rows="4" placeholder="กรอกข้อเสนอแนะ (ถ้ามี)"
+            class="w-full p-3 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 text-sm resize-none">${escapeHtml(feedback)}</textarea>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="text-sm font-medium text-slate-600">สถานะ:</label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="reviewChecked" ${isReviewed ? 'checked' : ''} class="w-4 h-4 accent-emerald-600">
+            <span class="text-sm font-bold text-emerald-700">ตรวจแล้ว</span>
+          </label>
+        </div>
+        <p id="reviewMsg" class="text-sm text-center font-medium"></p>
+      </div>
+      <div class="p-6 border-t border-slate-100 flex justify-end gap-3">
+        <button onclick="document.getElementById('reviewModal').remove()" class="px-5 py-2 rounded-lg text-slate-600 font-bold hover:bg-slate-100">ยกเลิก</button>
+        <button onclick="saveReview('${id}')" class="px-5 py-2 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700">บันทึก</button>
+      </div>
+    </div>`
+  document.body.appendChild(modal)
+}
+
+window.saveReview = async (submissionId) => {
+  const feedback = document.getElementById('reviewFeedback').value.trim()
+  const reviewed = document.getElementById('reviewChecked').checked
+  const msg = document.getElementById('reviewMsg')
+
+  msg.textContent = 'กำลังบันทึก...'
+  msg.className = 'text-sm text-center font-medium text-blue-500'
+
+  const { error } = await supabase.rpc('review_submission', {
+    submission_id: submissionId,
+    new_reviewed: reviewed,
+    new_feedback: feedback || null
+  })
+
+  if (error) {
+    msg.textContent = 'บันทึกไม่สำเร็จ: ' + error.message
+    msg.className = 'text-sm text-center font-medium text-red-500'
+    return
+  }
+
+  document.getElementById('reviewModal').remove()
+  renderMentorReview()
 }
 
 // ==========================================

@@ -117,6 +117,37 @@
             </button>
           </div>
 
+          <!-- เมนูสำหรับ Staff -->
+          <div id="staffMenuWrapper" class="hidden px-3 space-y-1">
+            <div class="sidebar-text mb-2 px-2 whitespace-nowrap"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">การจัดการ</p></div>
+            <button onclick="loadContent('staffDashboard')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">🏠</span><span class="sidebar-text ml-3 whitespace-nowrap">ภาพรวม</span>
+            </button>
+            <button onclick="loadContent('approvals')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">✅</span><span class="sidebar-text ml-3 whitespace-nowrap">อนุมัติผู้อบรม</span>
+            </button>
+            <button onclick="loadContent('profile')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">👤</span><span class="sidebar-text ml-3 whitespace-nowrap">โปรไฟล์ของฉัน</span>
+            </button>
+          </div>
+
+          <!-- เมนูสำหรับ Mentor -->
+          <div id="mentorMenuWrapper" class="hidden px-3 space-y-1">
+            <div class="sidebar-text mb-2 px-2 whitespace-nowrap"><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">เมนู</p></div>
+            <button onclick="loadContent('mentorDashboard')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">🏠</span><span class="sidebar-text ml-3 whitespace-nowrap">ภาพรวม</span>
+            </button>
+            <button onclick="loadContent('mentorTrainees')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">👥</span><span class="sidebar-text ml-3 whitespace-nowrap">ผู้อบรมทั้งหมด</span>
+            </button>
+            <button onclick="loadContent('mentorReview')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">📋</span><span class="sidebar-text ml-3 whitespace-nowrap">ตรวจงาน</span>
+            </button>
+            <button onclick="loadContent('profile')" class="w-full flex items-center p-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition group">
+              <span class="text-xl w-6 text-center shrink-0 group-hover:scale-110 transition-transform">👤</span><span class="sidebar-text ml-3 whitespace-nowrap">โปรไฟล์ของฉัน</span>
+            </button>
+          </div>
+
         </nav>
 
         <div class="p-3 border-t border-slate-200">
