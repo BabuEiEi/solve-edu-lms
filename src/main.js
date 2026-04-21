@@ -340,8 +340,9 @@ supabase.auth.getSession().then(({ data: { session } }) => {
   _initialSessionHandled = true
   updateUI(session)
 })
-supabase.auth.onAuthStateChange((_event, session) => {
+supabase.auth.onAuthStateChange((event, session) => {
   if (!_initialSessionHandled) return
+  if (event === 'INITIAL_SESSION') return
   updateUI(session)
 })
 
@@ -2013,6 +2014,7 @@ async function renderApprovalsPage() {
             <button onclick="approveUser('${u.id}')" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded text-xs font-bold">อนุมัติ</button>
             <button onclick="rejectUser('${u.id}')" class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs font-bold">ปฏิเสธ</button>
           ` : ''}
+          <button onclick="openEditProfileModal(${JSON.stringify(u).replace(/"/g, '&quot;')})" class="px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded text-xs font-bold">แก้ไข</button>
         </div>
       </td>
     </tr>`
@@ -2065,5 +2067,91 @@ window.rejectUser = async (userId) => {
   if (!confirm('ต้องการปฏิเสธผู้ใช้งานนี้ใช่หรือไม่?')) return
   const { error } = await supabase.rpc('update_profile_status', { target_id: userId, new_status: 'rejected' })
   if (error) { alert('ปฏิเสธไม่สำเร็จ: ' + error.message); return }
+  renderApprovalsPage()
+}
+
+window.openEditProfileModal = (u) => {
+  const existing = document.getElementById('editProfileModal')
+  if (existing) existing.remove()
+
+  const modal = document.createElement('div')
+  modal.id = 'editProfileModal'
+  modal.className = 'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4'
+  modal.innerHTML = `
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+        <h2 class="text-lg font-bold text-slate-800">แก้ไขข้อมูลสมาชิก</h2>
+        <button onclick="document.getElementById('editProfileModal').remove()" class="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">คำนำหน้านาม</label>
+          <select id="epTitle" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 text-sm mb-4">
+            <option value="" ${!u.title ? 'selected' : ''}>-- เลือก --</option>
+            <option value="นาย" ${u.title === 'นาย' ? 'selected' : ''}>นาย</option>
+            <option value="นาง" ${u.title === 'นาง' ? 'selected' : ''}>นาง</option>
+            <option value="นางสาว" ${u.title === 'นางสาว' ? 'selected' : ''}>นางสาว</option>
+            <option value="อื่น ๆ" ${u.title === 'อื่น ๆ' ? 'selected' : ''}>อื่น ๆ</option>
+          </select>
+          <label class="block text-xs font-bold text-slate-500 mb-1">ชื่อ-นามสกุล</label>
+          <input id="epFullName" value="${escapeHtml(u.full_name || '')}" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">หน่วยงาน / โรงเรียน</label>
+          <input id="epSchool" value="${escapeHtml(u.school_name || '')}" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">บทบาท</label>
+          <select id="epRole" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 text-sm">
+            <option value="student" ${u.role === 'student' ? 'selected' : ''}>Trainee</option>
+            <option value="teacher" ${u.role === 'teacher' ? 'selected' : ''}>Mentor</option>
+            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">สถานะ</label>
+          <select id="epStatus" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 text-sm">
+            <option value="pending" ${u.status === 'pending' ? 'selected' : ''}>รอการอนุมัติ</option>
+            <option value="approved" ${u.status === 'approved' ? 'selected' : ''}>อนุมัติแล้ว</option>
+            <option value="rejected" ${u.status === 'rejected' ? 'selected' : ''}>ปฏิเสธ</option>
+          </select>
+        </div>
+        <p id="epStatus_msg" class="text-sm text-center font-medium"></p>
+      </div>
+      <div class="p-6 border-t border-slate-100 flex justify-end gap-3">
+        <button onclick="document.getElementById('editProfileModal').remove()" class="px-5 py-2 rounded-lg text-slate-600 font-bold hover:bg-slate-100">ยกเลิก</button>
+        <button onclick="saveEditProfile('${u.id}')" class="px-5 py-2 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700">บันทึก</button>
+      </div>
+    </div>`
+  document.body.appendChild(modal)
+}
+
+window.saveEditProfile = async (userId) => {
+  const full_name = document.getElementById('epFullName').value.trim()
+  const school_name = document.getElementById('epSchool').value.trim()
+  const role = document.getElementById('epRole').value
+  const status = document.getElementById('epStatus').value
+  const title = document.getElementById('epTitle').value
+  const msg = document.getElementById('epStatus_msg')
+
+  msg.textContent = 'กำลังบันทึก...'
+  msg.className = 'text-sm text-center font-medium text-blue-500'
+
+  const { error } = await supabase.rpc('admin_update_profile', {
+    target_id: userId,
+    new_full_name: full_name,
+    new_school_name: school_name,
+    new_role: role,
+    new_status: status,
+    new_title: title
+  })
+
+  if (error) {
+    msg.textContent = 'บันทึกไม่สำเร็จ: ' + error.message
+    msg.className = 'text-sm text-center font-medium text-red-500'
+    return
+  }
+
+  document.getElementById('editProfileModal').remove()
   renderApprovalsPage()
 }
