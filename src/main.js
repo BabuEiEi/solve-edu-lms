@@ -1806,6 +1806,10 @@ window.submitQuiz = async (quizType) => {
     })
   } catch { /* ไม่ block UI */ }
 
+  if (quizType === 'pretest') {
+    setPretestMenuDisabled(true)
+  }
+
   const resultArea = document.getElementById('quizResultArea')
   if (resultArea) {
     resultArea.innerHTML = `
