@@ -1581,8 +1581,8 @@ function renderStudentQuestion(q, index) {
         </label>`).join('')}
       ${hint}
     </div>`
-          <span class="text-sm text-slate-700">${escapeHtml(opt)}</span>
-        </label>`).join('')}
+      < span class="text-sm text-slate-700" > ${ escapeHtml(opt) }</ >
+        </label > `).join('')}
     </div>`
   } else if (q.type === 'fill') {
     inputHTML = `<div class="mt-4">
@@ -1984,7 +1984,7 @@ function initVQPreview(videoUrl) {
   if (slider) { slider.max = 100; slider.value = 0 }
 
   if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
-  if (vqPlayer) { try { vqPlayer.destroy() } catch (_) {} vqPlayer = null }
+  if (vqPlayer) { try { vqPlayer.destroy() } catch (_) { } vqPlayer = null }
 
   const videoId = getYouTubeVideoId(videoUrl)
   if (!videoId) {
@@ -2046,7 +2046,7 @@ function startVQPolling() {
         if (Number(slider.max) !== dur) slider.max = dur
         if (!window._vqSliderDragging) slider.value = sec
       }
-    } catch (_) {}
+    } catch (_) { }
   }, 300)
 }
 
@@ -2059,7 +2059,7 @@ window.editVideoQuestion = async (id) => {
 window.closeVideoQuestionModal = () => {
   document.getElementById('videoQuestionAdminModal').classList.add('hidden')
   if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
-  if (vqPlayer) { try { vqPlayer.destroy() } catch (_) {} vqPlayer = null }
+  if (vqPlayer) { try { vqPlayer.destroy() } catch (_) { } vqPlayer = null }
   const container = document.getElementById('vqPlayerContainer')
   if (container) container.innerHTML = ''
 }
@@ -2086,7 +2086,7 @@ window.addEventListener('message', (e) => {
       const el = document.getElementById('vqCurrentTime')
       if (el) el.textContent = `${mm}:${ss}`
     }
-  } catch (_) {}
+  } catch (_) { }
 })
 
 window.vqCaptureTime = () => {
@@ -2269,8 +2269,8 @@ async function renderMentorDashboard() {
       <td class="p-4 text-xs text-slate-500">${escapeHtml(u.email || '-')}</td>
       <td class="p-4 text-center">
         ${passed
-          ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">ผ่านแล้ว</span>'
-          : '<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs rounded-full font-bold">ยังไม่ผ่าน</span>'}
+        ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">ผ่านแล้ว</span>'
+        : '<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs rounded-full font-bold">ยังไม่ผ่าน</span>'}
       </td>
     </tr>`
   }).join('')
@@ -2331,8 +2331,8 @@ async function renderMentorTrainees() {
       <td class="p-4 text-xs text-slate-500">${escapeHtml(u.email || '-')}</td>
       <td class="p-4 text-center">
         ${passed
-          ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">ผ่านแล้ว</span>'
-          : '<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs rounded-full font-bold">ยังไม่ผ่าน</span>'}
+        ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">ผ่านแล้ว</span>'
+        : '<span class="px-2 py-1 bg-slate-100 text-slate-500 text-xs rounded-full font-bold">ยังไม่ผ่าน</span>'}
       </td>
     </tr>`
   }).join('')
@@ -2396,8 +2396,8 @@ async function renderMentorReview() {
       </td>
       <td class="p-4">
         ${s.reviewed
-          ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">ตรวจแล้ว</span>'
-          : '<span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-bold">รอตรวจ</span>'}
+      ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-bold">ตรวจแล้ว</span>'
+      : '<span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-bold">รอตรวจ</span>'}
       </td>
       <td class="p-4">
         <button onclick="openReviewModal('${s.id}', ${JSON.stringify(s.full_name || '-')}, ${JSON.stringify(courseMap[s.course_id] || s.course_id)}, ${s.reviewed}, ${JSON.stringify(s.feedback || '')})"
