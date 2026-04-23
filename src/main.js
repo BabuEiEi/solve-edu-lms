@@ -45,7 +45,7 @@ const authStatus = document.getElementById('authStatus')
 // 2. ระบบ Sidebar
 // ==========================================
 const appSidebar = document.getElementById('appSidebar')
-const toggleSidebarBtn = document.getElementById('toggleSidebarBtn')
+const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
 let isSidebarExpanded = true
 
 function getProfileAvatarUrl(session, profile = null) {
