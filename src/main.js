@@ -1714,8 +1714,8 @@ window.submitQuiz = async (quizType) => {
         <div class="text-7xl mb-5">${passed ? '🎉' : '📚'}</div>
         <p class="text-5xl font-extrabold ${passed ? 'text-emerald-600' : 'text-orange-500'} mb-3">${percent}%</p>
         <p class="text-slate-500 text-lg mb-2">ได้ <strong>${score}</strong> คะแนน จากคะแนนเต็ม <strong>${total}</strong> คะแนน</p>
-        <p class="font-bold text-xl ${passed ? 'text-emerald-700' : 'text-orange-600'} mt-4">${passed ? '✅ ผ่านเกณฑ์ (80% ขึ้นไป)' : '❌ ยังไม่ผ่านเกณฑ์ 80%'}</p>
-        ${!passed ? `<button onclick="loadContent('${quizType}')" class="mt-8 px-10 py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-md">ทำแบบทดสอบใหม่อีกครั้ง</button>` : ''}
+        ${quizType === 'posttest' ? `<p class="font-bold text-xl ${passed ? 'text-emerald-700' : 'text-orange-600'} mt-4">${passed ? '✅ ผ่านเกณฑ์ (80% ขึ้นไป)' : '❌ ยังไม่ผ่านเกณฑ์ 80%'}</p>` : ''}
+        ${quizType === 'posttest' && !passed ? `<button onclick="loadContent('${quizType}')" class="mt-8 px-10 py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-md">ทำแบบทดสอบใหม่อีกครั้ง</button>` : ''}
       </div>
     `
     resultArea.scrollIntoView({ behavior: 'smooth' })
