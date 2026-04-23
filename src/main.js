@@ -1581,9 +1581,6 @@ function renderStudentQuestion(q, index) {
         </label>`).join('')}
       ${hint}
     </div>`
-      < span class="text-sm text-slate-700" > ${ escapeHtml(opt) }</ >
-        </label > `).join('')}
-    </div>`
   } else if (q.type === 'fill') {
     inputHTML = `<div class="mt-4">
       <input type="text" id="ans_${q.id}" placeholder="พิมพ์คำตอบที่นี่..."
