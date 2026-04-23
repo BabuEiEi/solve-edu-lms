@@ -1299,10 +1299,10 @@ window.renderQuizFormFields = () => {
   if (type === 'mcq') {
     container.innerHTML = `
       <div>
-        <label class="block text-xs font-bold text-slate-500 mb-2">ตัวเลือก (เลือก ● ข้างหน้าข้อที่ถูกต้อง)</label>
+        <label class="block text-xs font-bold text-slate-500 mb-2">ตัวเลือก (☑ ติ๊กข้อที่ถูกต้อง — เลือกได้มากกว่า 1 ข้อ)</label>
         ${['A', 'B', 'C', 'D'].map(l => `
           <div class="flex items-center gap-2 mb-2">
-            <input type="radio" name="mcq_correct" value="${l}" ${l === 'A' ? 'checked' : ''} class="accent-violet-600 shrink-0">
+            <input type="checkbox" name="mcq_correct" value="${l}" class="accent-violet-600 shrink-0 w-4 h-4 rounded">
             <span class="text-xs font-bold text-slate-500 w-5">${l}.</span>
             <input type="text" id="opt_${l}" placeholder="ตัวเลือก ${l}" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-violet-500">
           </div>`).join('')}
@@ -1387,12 +1387,12 @@ window.editQuizQuestion = async (id) => {
         const el = document.getElementById(`opt_${l}`)
         if (el) el.value = opts[i] || ''
       })
-    const correctIndex = opts.indexOf(q.answer)
-    const correctLabel = ['A', 'B', 'C', 'D'][correctIndex]
-    if (correctLabel) {
-      const radio = document.querySelector(`input[name="mcq_correct"][value="${correctLabel}"]`)
-      if (radio) radio.checked = true
-    }
+    // answer อาจเป็น array หรือ string เดิม
+    const correctAnswers = Array.isArray(q.answer) ? q.answer : (q.answer ? [q.answer] : [])
+    document.querySelectorAll('input[name="mcq_correct"]').forEach(cb => {
+      const optVal = document.getElementById(`opt_${cb.value}`)?.value.trim()
+      cb.checked = correctAnswers.includes(optVal)
+    })
   } else if (q.type === 'fill') {
     const el = document.getElementById('fill_answer')
     if (el) el.value = q.answer || ''
@@ -1440,14 +1440,16 @@ window.saveQuizQuestion = async () => {
         const v = document.getElementById(`opt_${l}`)?.value.trim()
         if (v) optMap[l] = v
       })
-    const correctLabel = document.querySelector('input[name="mcq_correct"]:checked')?.value
+    const checkedLabels = [...document.querySelectorAll('input[name="mcq_correct"]:checked')].map(cb => cb.value)
     options = ['A', 'B', 'C', 'D'].map(l => optMap[l]).filter(Boolean)
-    answer = optMap[correctLabel] || null
-    if (options.length < 2 || !answer) {
-      statusEl.textContent = 'กรุณากรอกตัวเลือกอย่างน้อย 2 ข้อ และเลือกคำตอบที่ถูกต้อง'
+    answer = checkedLabels.map(l => optMap[l]).filter(Boolean)
+    if (options.length < 2 || answer.length === 0) {
+      statusEl.textContent = 'กรุณากรอกตัวเลือกอย่างน้อย 2 ข้อ และเลือกคำตอบที่ถูกต้องอย่างน้อย 1 ข้อ'
       statusEl.className = 'mt-4 text-center text-sm font-bold text-red-500'
       return
     }
+    // ถ้ามีคำตอบเดียวให้เก็บเป็น string เพื่อ backward compat
+    if (answer.length === 1) answer = answer[0]
   } else if (qType === 'fill') {
     answer = document.getElementById('fill_answer')?.value.trim()
     if (!answer) {
@@ -1568,10 +1570,17 @@ function renderStudentQuestion(q, index) {
   let inputHTML = ''
 
   if (q.type === 'mcq') {
+    const isMulti = Array.isArray(q.answer)
+    const inputType = isMulti ? 'checkbox' : 'radio'
+    const hint = isMulti ? `<p class="text-xs text-blue-500 mt-2 font-medium">☑ เลือกได้มากกว่า 1 ข้อ</p>` : ''
     inputHTML = `<div class="space-y-2 mt-4">
       ${(q.options || []).map(opt => `
         <label class="flex items-center gap-3 p-3.5 border border-slate-200 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition">
-          <input type="radio" name="q_${q.id}" value="${escapeHtml(opt)}" class="accent-blue-600 shrink-0 w-4 h-4">
+          <input type="${inputType}" name="q_${q.id}" value="${escapeHtml(opt)}" class="accent-blue-600 shrink-0 w-4 h-4">
+          <span class="text-sm text-slate-700">${escapeHtml(opt)}</span>
+        </label>`).join('')}
+      ${hint}
+    </div>`
           <span class="text-sm text-slate-700">${escapeHtml(opt)}</span>
         </label>`).join('')}
     </div>`
@@ -1657,9 +1666,18 @@ window.submitQuiz = async (quizType) => {
   currentQuizQuestions.forEach(q => {
     const pts = q.points || 1
     if (q.type === 'mcq') {
-      const sel = document.querySelector(`input[name="q_${q.id}"]:checked`)?.value
-      userAnswers[q.id] = sel || null
-      if (sel === q.answer) score += pts
+      const isMulti = Array.isArray(q.answer)
+      if (isMulti) {
+        const selected = [...document.querySelectorAll(`input[name="q_${q.id}"]:checked`)].map(el => el.value)
+        userAnswers[q.id] = selected
+        const correctSet = new Set(q.answer)
+        const correct = selected.length === correctSet.size && selected.every(s => correctSet.has(s))
+        if (correct) score += pts
+      } else {
+        const sel = document.querySelector(`input[name="q_${q.id}"]:checked`)?.value
+        userAnswers[q.id] = sel || null
+        if (sel === q.answer) score += pts
+      }
     } else if (q.type === 'fill') {
       const ans = document.getElementById(`ans_${q.id}`)?.value.trim()
       userAnswers[q.id] = ans
