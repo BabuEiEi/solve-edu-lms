@@ -1516,6 +1516,21 @@ window.deleteQuizQuestion = async (id) => {
 async function loadQuizPage(quizType) {
   contentArea.innerHTML = '<div class="text-center py-20 text-slate-400 text-lg">⏳ กำลังโหลดคำถาม...</div>'
 
+  const { data: { session } } = await supabase.auth.getSession()
+  if (quizType === 'pretest' && session?.user?.id) {
+    const { data: attempts, error: attemptError } = await supabase
+      .from(QUIZ_RESULTS_TABLE)
+      .select('score,total')
+      .eq('user_id', session.user.id)
+      .eq('quiz_type', 'pretest')
+      .order('id', { ascending: false })
+      .limit(1)
+    if (!attemptError && attempts && attempts.length > 0) {
+      renderPretestLockedPage(attempts[0])
+      return
+    }
+  }
+
   const filter = quizType === 'pretest' ? ['pretest', 'both'] : ['posttest', 'both']
   const { data: questions, error } = await supabase
     .from(QUIZ_QUESTIONS_TABLE).select('*').in('quiz_type', filter)
@@ -1535,6 +1550,24 @@ async function loadQuizPage(quizType) {
       : q
   )
   renderQuizPage(quizType)
+}
+
+function renderPretestLockedPage(lastResult) {
+  const score = Number(lastResult?.score || 0)
+  const total = Number(lastResult?.total || 0)
+  const percent = total > 0 ? Math.round((score / total) * 100) : 0
+
+  contentArea.innerHTML = `
+    <div class="max-w-3xl mx-auto w-full animate-fade-in pb-10">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
+        <div class="text-7xl mb-5">🔒</div>
+        <h1 class="text-3xl font-extrabold text-slate-800 mb-3">แบบทดสอบก่อนเรียน</h1>
+        <p class="text-slate-500 text-lg mb-2">คุณได้ทำแบบทดสอบก่อนเรียนไปแล้ว (ทำได้ 1 ครั้ง)</p>
+        <p class="text-5xl font-extrabold text-blue-600 mb-3">${percent}%</p>
+        <p class="text-slate-500 text-lg">ได้ <strong>${score}</strong> คะแนน จากคะแนนเต็ม <strong>${total}</strong> คะแนน</p>
+      </div>
+    </div>
+  `
 }
 
 function renderQuizPage(quizType) {
@@ -1557,7 +1590,7 @@ function renderQuizPage(quizType) {
       ${currentQuizQuestions.map((q, i) => renderStudentQuestion(q, i)).join('')}
     </div>
     <div class="mt-10 text-center">
-      <button onclick="submitQuiz('${quizType}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-16 rounded-2xl text-lg shadow-lg transition">ส่งคำตอบ</button>
+      <button id="quizSubmitBtn" onclick="submitQuiz('${quizType}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-16 rounded-2xl text-lg shadow-lg transition">ส่งคำตอบ</button>
     </div>
     <div id="quizResultArea" class="mt-10"></div>
   `
@@ -1655,6 +1688,27 @@ function initStudentDragDrop(qId) {
 window.submitQuiz = async (quizType) => {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return
+
+  const submitBtn = document.getElementById('quizSubmitBtn')
+  if (submitBtn?.disabled) return
+  if (submitBtn) {
+    submitBtn.disabled = true
+    submitBtn.classList.add('opacity-60', 'cursor-not-allowed')
+    submitBtn.textContent = 'กำลังส่งคำตอบ...'
+  }
+
+  if (quizType === 'pretest') {
+    const { data: attempts, error: attemptError } = await supabase
+      .from(QUIZ_RESULTS_TABLE)
+      .select('id')
+      .eq('user_id', session.user.id)
+      .eq('quiz_type', 'pretest')
+      .limit(1)
+    if (!attemptError && attempts && attempts.length > 0) {
+      loadQuizPage('pretest')
+      return
+    }
+  }
 
   let score = 0
   const total = currentQuizQuestions.reduce((s, q) => s + (q.points || 1), 0)
