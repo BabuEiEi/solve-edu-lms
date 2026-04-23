@@ -40,6 +40,7 @@ const logoutBtn = document.getElementById('logoutBtn')
 const contentArea = document.getElementById('contentArea')
 const adminMenuWrapper = document.getElementById('adminMenuWrapper')
 const authStatus = document.getElementById('authStatus')
+const pretestMenuBtn = document.getElementById('pretestMenuBtn')
 
 // ==========================================
 // 2. ระบบ Sidebar
@@ -47,6 +48,45 @@ const authStatus = document.getElementById('authStatus')
 const appSidebar = document.getElementById('appSidebar')
 const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
 let isSidebarExpanded = true
+
+function setPretestMenuDisabled(disabled) {
+  if (!pretestMenuBtn) return
+  pretestMenuBtn.disabled = Boolean(disabled)
+  pretestMenuBtn.classList.toggle('opacity-50', Boolean(disabled))
+  pretestMenuBtn.classList.toggle('cursor-not-allowed', Boolean(disabled))
+  pretestMenuBtn.classList.toggle('bg-slate-100', Boolean(disabled))
+  pretestMenuBtn.classList.toggle('text-slate-400', Boolean(disabled))
+  pretestMenuBtn.classList.toggle('pointer-events-none', Boolean(disabled))
+  if (disabled) {
+    pretestMenuBtn.setAttribute('title', 'ทำแบบทดสอบก่อนเรียนแล้ว')
+    pretestMenuBtn.setAttribute('aria-disabled', 'true')
+  } else {
+    pretestMenuBtn.removeAttribute('title')
+    pretestMenuBtn.removeAttribute('aria-disabled')
+  }
+}
+
+async function refreshPretestMenuState(userId) {
+  if (!pretestMenuBtn) return
+  if (!userId) {
+    setPretestMenuDisabled(false)
+    return
+  }
+
+  const { data, error } = await supabase
+    .from(QUIZ_RESULTS_TABLE)
+    .select('id')
+    .eq('user_id', userId)
+    .eq('quiz_type', 'pretest')
+    .limit(1)
+
+  if (error) {
+    setPretestMenuDisabled(false)
+    return
+  }
+
+  setPretestMenuDisabled((data || []).length > 0)
+}
 
 function getProfileAvatarUrl(session, profile = null) {
   return (
@@ -267,17 +307,21 @@ async function updateUI(session) {
     if (userRole === 'admin') {
       document.getElementById('adminMenuWrapper').classList.remove('hidden')
       fetchCourses()
+      setPretestMenuDisabled(false)
       window.loadContent('approvals')
     } else if (userRole === 'staff') {
       document.getElementById('staffMenuWrapper').classList.remove('hidden')
+      setPretestMenuDisabled(false)
       window.loadContent('staffDashboard')
     } else if (userRole === 'teacher') {
       document.getElementById('mentorMenuWrapper').classList.remove('hidden')
       fetchCourses()
+      setPretestMenuDisabled(false)
       window.loadContent('mentorDashboard')
     } else {
       document.getElementById('userMenuWrapper').classList.remove('hidden')
       fetchCourses()
+      await refreshPretestMenuState(session.user.id)
       window.loadContent('guidelines')
     }
 
@@ -287,6 +331,7 @@ async function updateUI(session) {
     userEmailDisplay.textContent = ''
     contentArea.innerHTML = ''
     document.getElementById('adminModal').classList.add('hidden')
+    setPretestMenuDisabled(false)
     showLoginForm()
   }
 }
