@@ -1413,10 +1413,16 @@ function renderQuizResultActions(result, quizType) {
   if (!result) return '<span class="text-xs text-slate-300">-</span>'
 
   return `
-    <div class="flex items-center justify-center gap-1.5">
-      <button onclick="editQuizScore('${result.id}', '${quizType}')" class="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-bold">แก้ไข</button>
-      <button onclick="deleteQuizScore('${result.id}', '${quizType}')" class="px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 text-[11px] font-bold">ลบ</button>
-      <button onclick="cancelQuizScore('${result.id}', '${quizType}')" class="px-2 py-1 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-bold">ยกเลิก</button>
+    <div class="flex items-center justify-center gap-1">
+      <button onclick="editQuizScore('${result.id}', '${quizType}')" title="แก้ไขคะแนน" class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition" >
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+      <button onclick="deleteQuizScore('${result.id}', '${quizType}')" title="ลบคะแนน" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </button>
+      <button onclick="cancelQuizScore('${result.id}', '${quizType}')" title="ยกเลิกคะแนน" class="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      </button>
     </div>
   `
 }
@@ -1571,9 +1577,9 @@ async function renderScoreMatrixPage() {
             <p class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(u.email || '-')}</p>
           </td>
           <td class="p-3 text-center min-w-[130px]">${formatQuizResultCell(pre)}</td>
-          <td class="p-3 text-center min-w-[210px]">${renderQuizResultActions(pre, 'pretest')}</td>
+          <td class="p-3 text-center min-w-[100px]">${renderQuizResultActions(pre, 'pretest')}</td>
           <td class="p-3 text-center min-w-[130px]">${formatQuizResultCell(post)}</td>
-          <td class="p-3 text-center min-w-[210px]">${renderQuizResultActions(post, 'posttest')}</td>
+          <td class="p-3 text-center min-w-[100px]">${renderQuizResultActions(post, 'posttest')}</td>
           ${workCells}
         </tr>
       `
@@ -1587,9 +1593,9 @@ async function renderScoreMatrixPage() {
             <th class="p-3 text-center w-12">#</th>
             <th class="p-3 min-w-[220px]">ผู้อบรม</th>
             <th class="p-3 text-center min-w-[130px]">Pre-Test</th>
-            <th class="p-3 text-center min-w-[210px]">จัดการ Pre</th>
+            <th class="p-3 text-center min-w-[100px]">จัดการ Pre</th>
             <th class="p-3 text-center min-w-[130px]">Post-Test</th>
-            <th class="p-3 text-center min-w-[210px]">จัดการ Post</th>
+            <th class="p-3 text-center min-w-[100px]">จัดการ Post</th>
             ${headerCourseCells}
           </tr>
         </thead>
