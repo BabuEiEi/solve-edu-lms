@@ -1576,26 +1576,32 @@ async function renderScoreMatrixPage() {
             <p class="text-xs text-slate-400">${escapeHtml(u.school_name || '-')}</p>
             <p class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(u.email || '-')}</p>
           </td>
-          <td class="p-3 text-center min-w-[130px]">${formatQuizResultCell(pre)}</td>
-          <td class="p-3 text-center min-w-[100px]">${renderQuizResultActions(pre, 'pretest')}</td>
-          <td class="p-3 text-center min-w-[130px]">${formatQuizResultCell(post)}</td>
-          <td class="p-3 text-center min-w-[100px]">${renderQuizResultActions(post, 'posttest')}</td>
+          <td class="p-3 text-center min-w-[140px]">
+            <div class="flex flex-col items-center gap-1.5">
+              <div>${formatQuizResultCell(pre)}</div>
+              <div>${renderQuizResultActions(pre, 'pretest')}</div>
+            </div>
+          </td>
+          <td class="p-3 text-center min-w-[140px]">
+            <div class="flex flex-col items-center gap-1.5">
+              <div>${formatQuizResultCell(post)}</div>
+              <div>${renderQuizResultActions(post, 'posttest')}</div>
+            </div>
+          </td>
           ${workCells}
         </tr>
       `
     }).join('')
 
-    const colSpan = 6 + courseList.length
+    const colSpan = 4 + courseList.length
     matrixWrap.innerHTML = `
       <table class="w-full text-left text-sm text-slate-600">
         <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
           <tr>
             <th class="p-3 text-center w-12">#</th>
             <th class="p-3 min-w-[220px]">ผู้อบรม</th>
-            <th class="p-3 text-center min-w-[130px]">Pre-Test</th>
-            <th class="p-3 text-center min-w-[100px]">จัดการ Pre</th>
-            <th class="p-3 text-center min-w-[130px]">Post-Test</th>
-            <th class="p-3 text-center min-w-[100px]">จัดการ Post</th>
+            <th class="p-3 text-center min-w-[140px]">Pre-Test</th>
+            <th class="p-3 text-center min-w-[140px]">Post-Test</th>
             ${headerCourseCells}
           </tr>
         </thead>
