@@ -1,5 +1,6 @@
 import './style.css'
 import { supabase } from './supabaseClient.js'
+import ExcelJS from 'exceljs'
 
 // ==========================================
 // 1. ตั้งค่าพื้นฐาน
@@ -1186,8 +1187,459 @@ window.loadContent = (type, data = null) => {
     renderMentorReview()
     return
   }
+  else if (type === 'scoreMatrix') {
+    renderScoreMatrixPage()
+    return
+  }
 
   contentArea.appendChild(container)
+}
+
+// ==========================================
+// Matrix: ผลการสอบ + ภาระงานผู้อบรม
+// ==========================================
+
+function parseResultAnswers(answers) {
+  if (!answers) return null
+  if (typeof answers === 'object') return answers
+  if (typeof answers === 'string') {
+    try {
+      return JSON.parse(answers)
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+let scoreMatrixExportRows = []
+let scoreMatrixExportCourses = []
+
+function autoFitWorksheetColumns(worksheet) {
+  worksheet.columns?.forEach(column => {
+    let maxLength = 10
+    column.eachCell({ includeEmpty: true }, cell => {
+      const cellValue = cell.value
+      const text = cellValue == null
+        ? ''
+        : typeof cellValue === 'object' && cellValue.richText
+          ? cellValue.richText.map(part => part.text).join('')
+          : String(cellValue)
+      maxLength = Math.max(maxLength, text.length + 2)
+    })
+    column.width = Math.min(maxLength, 45)
+  })
+}
+
+function styleHeaderRow(row) {
+  row.eachCell(cell => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0F766E' }
+    }
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+    }
+  })
+}
+
+function styleDataBorders(worksheet) {
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return
+    row.eachCell(cell => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+      }
+      cell.alignment = { vertical: 'middle', wrapText: true }
+    })
+  })
+}
+
+function scoreTextForExport(result) {
+  if (!result) return '-'
+  const parsedAnswers = parseResultAnswers(result.answers)
+  if (parsedAnswers?.__canceled) return 'ยกเลิกคะแนน'
+  const score = Number(result.score || 0)
+  const total = Number(result.total || 0)
+  const percent = total > 0 ? Math.round((score / total) * 100) : 0
+  return `${score}/${total} (${percent}%)`
+}
+
+window.exportScoreMatrixExcel = async () => {
+  if (!scoreMatrixExportRows.length) {
+    alert('ไม่มีข้อมูลสำหรับ Export')
+    return
+  }
+
+  const exportBtn = document.getElementById('matrixExportBtn')
+  const originalBtnText = exportBtn?.textContent || 'Export Excel'
+  if (exportBtn) {
+    exportBtn.disabled = true
+    exportBtn.textContent = 'กำลังสร้างไฟล์...'
+    exportBtn.classList.add('opacity-70', 'cursor-not-allowed')
+  }
+
+  try {
+    const workbook = new ExcelJS.Workbook()
+    workbook.creator = 'SolveEdu LMS'
+    workbook.created = new Date()
+
+    const matrixSheet = workbook.addWorksheet('Score Matrix')
+    const headers = ['#', 'ชื่อผู้อบรม', 'โรงเรียน/หน่วยงาน', 'อีเมล', 'Pre-Test', 'Post-Test', ...scoreMatrixExportCourses.map(c => `${c.course_id || '-'} ${c.course_name || ''}`.trim())]
+    matrixSheet.addRow(headers)
+
+    scoreMatrixExportRows.forEach((row, idx) => {
+      const workCols = row.works.map(w => {
+        if (!w.submitted) return 'ยังไม่ส่ง'
+        return w.url ? `ส่งแล้ว (${w.url})` : 'ส่งแล้ว'
+      })
+
+      matrixSheet.addRow([
+        idx + 1,
+        row.full_name,
+        row.school_name,
+        row.email,
+        row.pretest,
+        row.posttest,
+        ...workCols
+      ])
+    })
+
+    styleHeaderRow(matrixSheet.getRow(1))
+    styleDataBorders(matrixSheet)
+    matrixSheet.views = [{ state: 'frozen', ySplit: 1 }]
+    autoFitWorksheetColumns(matrixSheet)
+
+    const summarySheet = workbook.addWorksheet('Summary')
+    summarySheet.addRow(['หัวข้อ', 'ค่า'])
+    summarySheet.addRow(['จำนวนผู้อบรมที่แสดงในรายงาน', scoreMatrixExportRows.length])
+    summarySheet.addRow(['จำนวนคอลัมน์ภาระงาน', scoreMatrixExportCourses.length])
+    summarySheet.addRow(['สร้างรายงานเมื่อ', new Date().toLocaleString('th-TH')])
+
+    const prePassed = scoreMatrixExportRows.filter(r => /\((\d+)%\)/.test(r.pretest) && Number(r.pretest.match(/\((\d+)%\)/)?.[1] || 0) >= 80).length
+    const postPassed = scoreMatrixExportRows.filter(r => /\((\d+)%\)/.test(r.posttest) && Number(r.posttest.match(/\((\d+)%\)/)?.[1] || 0) >= 80).length
+    summarySheet.addRow(['Pre-Test >= 80%', prePassed])
+    summarySheet.addRow(['Post-Test >= 80%', postPassed])
+
+    styleHeaderRow(summarySheet.getRow(1))
+    styleDataBorders(summarySheet)
+    autoFitWorksheetColumns(summarySheet)
+
+    const filtersSheet = workbook.addWorksheet('Filters')
+    filtersSheet.addRow(['ตัวกรอง', 'ค่า'])
+    filtersSheet.addRow(['คำค้นหา', document.getElementById('matrixSearchInput')?.value || ''])
+    filtersSheet.addRow(['เฉพาะยังไม่ส่งงาน', document.getElementById('matrixOnlyMissingWork')?.checked ? 'ใช่' : 'ไม่ใช่'])
+    styleHeaderRow(filtersSheet.getRow(1))
+    styleDataBorders(filtersSheet)
+    autoFitWorksheetColumns(filtersSheet)
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `score-matrix-${new Date().toISOString().slice(0, 10)}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    alert(`Export Excel ไม่สำเร็จ: ${err.message || err}`)
+  } finally {
+    if (exportBtn) {
+      exportBtn.disabled = false
+      exportBtn.textContent = originalBtnText
+      exportBtn.classList.remove('opacity-70', 'cursor-not-allowed')
+    }
+  }
+}
+
+function formatQuizResultCell(result) {
+  if (!result) return '<span class="text-slate-300">-</span>'
+
+  const parsedAnswers = parseResultAnswers(result.answers)
+  if (parsedAnswers?.__canceled) {
+    return '<span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-bold">ยกเลิกคะแนน</span>'
+  }
+
+  const score = Number(result.score || 0)
+  const total = Number(result.total || 0)
+  const percent = total > 0 ? Math.round((score / total) * 100) : 0
+  return `<span class="font-bold text-slate-700">${score}/${total}</span><span class="text-xs text-slate-400 ml-1">(${percent}%)</span>`
+}
+
+function renderQuizResultActions(result, quizType) {
+  if (!result) return '<span class="text-xs text-slate-300">-</span>'
+
+  return `
+    <div class="flex items-center justify-center gap-1.5">
+      <button onclick="editQuizScore('${result.id}', '${quizType}')" class="px-2 py-1 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 text-[11px] font-bold">แก้ไข</button>
+      <button onclick="deleteQuizScore('${result.id}', '${quizType}')" class="px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 text-[11px] font-bold">ลบ</button>
+      <button onclick="cancelQuizScore('${result.id}', '${quizType}')" class="px-2 py-1 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-bold">ยกเลิก</button>
+    </div>
+  `
+}
+
+async function renderScoreMatrixPage() {
+  contentArea.innerHTML = ''
+  const container = document.createElement('div')
+  container.className = 'max-w-[96rem] mx-auto w-full animate-fade-in'
+
+  container.innerHTML = `
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-12 h-12 bg-cyan-100 text-cyan-600 rounded-xl flex items-center justify-center text-2xl">📊</div>
+      <div>
+        <h1 class="text-3xl font-extrabold text-slate-800">ผลการสอบและภาระงานผู้อบรม</h1>
+        <p class="text-sm text-slate-500">ตาราง Matrix: Pre-Test, Post-Test และสถานะภาระงานรายวิชา</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <div class="md:col-span-2">
+          <label for="matrixSearchInput" class="block text-xs font-bold text-slate-500 mb-1">ค้นหาชื่อ / โรงเรียน / อีเมล</label>
+          <input id="matrixSearchInput" type="text" placeholder="พิมพ์ชื่อ โรงเรียน หรืออีเมล" class="w-full p-2.5 border border-slate-200 rounded-lg outline-none focus:border-cyan-500 text-sm">
+        </div>
+        <div class="flex items-center justify-between md:justify-end gap-3">
+          <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+            <input id="matrixOnlyMissingWork" type="checkbox" class="accent-cyan-600">
+            เฉพาะยังไม่ส่งงาน
+          </label>
+          <button id="matrixExportBtn" type="button" onclick="exportScoreMatrixExcel()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold transition">Export Excel</button>
+        </div>
+      </div>
+      <p id="matrixFilterSummary" class="mt-3 text-xs text-slate-500"></p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 text-sm text-slate-500 mb-4">
+      แก้ไข/ลบ/ยกเลิกได้เฉพาะคะแนน Pre-Test และ Post-Test ส่วนภาระงานเป็นแบบดูสถานะและเปิดไฟล์เท่านั้น
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div id="scoreMatrixWrap" class="overflow-x-auto">
+        <div class="p-8 text-center text-slate-400">⏳ กำลังโหลดข้อมูล...</div>
+      </div>
+    </div>
+  `
+  contentArea.appendChild(container)
+
+  const [{ data: users, error: usersError }, { data: results, error: resultsError }, { data: logs, error: logsError }, { data: courses, error: coursesError }] = await Promise.all([
+    supabase.rpc('get_all_profiles'),
+    supabase.from(QUIZ_RESULTS_TABLE).select('id,user_id,quiz_type,score,total,answers').in('quiz_type', ['pretest', 'posttest']).order('id', { ascending: false }),
+    supabase.from('course_logs').select('id,user_id,course_id,file_url').not('file_url', 'is', null),
+    supabase.from(COURSES_TABLE).select('course_id,course_name').order('course_id', { ascending: true })
+  ])
+
+  const matrixWrap = document.getElementById('scoreMatrixWrap')
+  if (!matrixWrap) return
+
+  const error = usersError || resultsError || logsError || coursesError
+  if (error) {
+    matrixWrap.innerHTML = `<div class="p-8 text-center text-red-500">โหลดข้อมูลไม่สำเร็จ: ${escapeHtml(error.message || 'Unknown error')}</div>`
+    return
+  }
+
+  const trainees = (users || []).filter(u => u.status === 'approved' && u.role === 'student')
+  const courseList = courses || []
+  const latestResultByKey = new Map()
+    ; (results || []).forEach(r => {
+      const key = `${r.user_id}:${r.quiz_type}`
+      if (!latestResultByKey.has(key)) latestResultByKey.set(key, r)
+    })
+
+  const logByUserCourse = new Map()
+    ; (logs || []).forEach(log => {
+      const key = `${log.user_id}:${log.course_id}`
+      if (!logByUserCourse.has(key)) logByUserCourse.set(key, log)
+    })
+
+  const searchInput = document.getElementById('matrixSearchInput')
+  const onlyMissingWorkInput = document.getElementById('matrixOnlyMissingWork')
+  const filterSummaryEl = document.getElementById('matrixFilterSummary')
+
+  const getFilteredTrainees = () => {
+    const query = (searchInput?.value || '').trim().toLowerCase()
+    const onlyMissingWork = Boolean(onlyMissingWorkInput?.checked)
+
+    return trainees.filter(u => {
+      const name = String(u.full_name || '').toLowerCase()
+      const school = String(u.school_name || '').toLowerCase()
+      const email = String(u.email || '').toLowerCase()
+      const matched = !query || name.includes(query) || school.includes(query) || email.includes(query)
+      if (!matched) return false
+
+      if (!onlyMissingWork) return true
+      return courseList.some(c => !logByUserCourse.get(`${u.id}:${c.course_id}`)?.file_url)
+    })
+  }
+
+  const updateExportRows = (filteredTrainees) => {
+    scoreMatrixExportCourses = [...courseList]
+    scoreMatrixExportRows = filteredTrainees.map(u => {
+      const pre = latestResultByKey.get(`${u.id}:pretest`)
+      const post = latestResultByKey.get(`${u.id}:posttest`)
+      const works = courseList.map(c => {
+        const log = logByUserCourse.get(`${u.id}:${c.course_id}`)
+        return { submitted: Boolean(log?.file_url), url: log?.file_url || '' }
+      })
+
+      return {
+        full_name: u.full_name || '-',
+        school_name: u.school_name || '-',
+        email: u.email || '-',
+        pretest: scoreTextForExport(pre),
+        posttest: scoreTextForExport(post),
+        works
+      }
+    })
+  }
+
+  const renderMatrixTable = (filteredTrainees) => {
+    const headerCourseCells = courseList.map(c => `
+      <th class="p-3 text-center min-w-[140px]">
+        <p class="font-bold text-slate-700">${escapeHtml(c.course_id || '-')}</p>
+        <p class="text-[10px] text-slate-400 leading-tight mt-1">${escapeHtml(c.course_name || '-')}</p>
+      </th>
+    `).join('')
+
+    const rows = filteredTrainees.map((u, idx) => {
+      const pre = latestResultByKey.get(`${u.id}:pretest`)
+      const post = latestResultByKey.get(`${u.id}:posttest`)
+      const workCells = courseList.map(c => {
+        const log = logByUserCourse.get(`${u.id}:${c.course_id}`)
+        if (log?.file_url) {
+          return `<td class="p-3 text-center"><a href="${escapeHtml(log.file_url)}" target="_blank" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100">✅ ดู</a></td>`
+        }
+        return '<td class="p-3 text-center text-slate-300">-</td>'
+      }).join('')
+
+      return `
+        <tr class="border-b border-slate-100 hover:bg-slate-50/60 align-top">
+          <td class="p-3 text-center text-xs text-slate-400 font-bold">${idx + 1}</td>
+          <td class="p-3 min-w-[220px]">
+            <p class="font-bold text-slate-800 text-sm">${escapeHtml(u.full_name || '-')}</p>
+            <p class="text-xs text-slate-400">${escapeHtml(u.school_name || '-')}</p>
+            <p class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(u.email || '-')}</p>
+          </td>
+          <td class="p-3 text-center min-w-[130px]">${formatQuizResultCell(pre)}</td>
+          <td class="p-3 text-center min-w-[210px]">${renderQuizResultActions(pre, 'pretest')}</td>
+          <td class="p-3 text-center min-w-[130px]">${formatQuizResultCell(post)}</td>
+          <td class="p-3 text-center min-w-[210px]">${renderQuizResultActions(post, 'posttest')}</td>
+          ${workCells}
+        </tr>
+      `
+    }).join('')
+
+    const colSpan = 6 + courseList.length
+    matrixWrap.innerHTML = `
+      <table class="w-full text-left text-sm text-slate-600">
+        <thead class="bg-slate-50 text-slate-700 border-b border-slate-200">
+          <tr>
+            <th class="p-3 text-center w-12">#</th>
+            <th class="p-3 min-w-[220px]">ผู้อบรม</th>
+            <th class="p-3 text-center min-w-[130px]">Pre-Test</th>
+            <th class="p-3 text-center min-w-[210px]">จัดการ Pre</th>
+            <th class="p-3 text-center min-w-[130px]">Post-Test</th>
+            <th class="p-3 text-center min-w-[210px]">จัดการ Post</th>
+            ${headerCourseCells}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td colspan="${colSpan}" class="p-8 text-center text-slate-400">ไม่พบข้อมูลตามเงื่อนไขที่กรอง</td></tr>`}
+        </tbody>
+      </table>
+    `
+  }
+
+  const applyFilters = () => {
+    const filtered = getFilteredTrainees()
+    renderMatrixTable(filtered)
+    updateExportRows(filtered)
+    if (filterSummaryEl) {
+      filterSummaryEl.textContent = `แสดง ${filtered.length} จาก ${trainees.length} คน`
+    }
+  }
+
+  if (searchInput) searchInput.addEventListener('input', applyFilters)
+  if (onlyMissingWorkInput) onlyMissingWorkInput.addEventListener('change', applyFilters)
+
+  applyFilters()
+}
+
+window.editQuizScore = async (resultId, quizType) => {
+  const { data: row, error } = await supabase
+    .from(QUIZ_RESULTS_TABLE)
+    .select('id,score,total,answers')
+    .eq('id', resultId)
+    .maybeSingle()
+  if (error || !row) {
+    alert('ไม่พบข้อมูลคะแนนที่ต้องการแก้ไข')
+    return
+  }
+
+  const currScore = Number(row.score || 0)
+  const currTotal = Number(row.total || 0)
+  const nextScoreRaw = prompt(`แก้ไขคะแนน ${quizType.toUpperCase()} (คะแนนที่ได้)`, String(currScore))
+  if (nextScoreRaw === null) return
+  const nextTotalRaw = prompt(`แก้ไขคะแนน ${quizType.toUpperCase()} (คะแนนเต็ม)`, String(currTotal > 0 ? currTotal : 1))
+  if (nextTotalRaw === null) return
+
+  const nextScore = Number(nextScoreRaw)
+  const nextTotal = Number(nextTotalRaw)
+  if (!Number.isFinite(nextScore) || !Number.isFinite(nextTotal) || nextScore < 0 || nextTotal <= 0 || nextScore > nextTotal) {
+    alert('รูปแบบคะแนนไม่ถูกต้อง (ต้องเป็นตัวเลข และคะแนนที่ได้ต้องไม่เกินคะแนนเต็ม)')
+    return
+  }
+
+  const existingAnswers = parseResultAnswers(row.answers)
+  const cleanAnswers = existingAnswers && typeof existingAnswers === 'object' ? { ...existingAnswers } : existingAnswers
+  if (cleanAnswers && typeof cleanAnswers === 'object' && cleanAnswers.__canceled) delete cleanAnswers.__canceled
+
+  const { error: updateError } = await supabase
+    .from(QUIZ_RESULTS_TABLE)
+    .update({ score: nextScore, total: nextTotal, answers: cleanAnswers || row.answers || null })
+    .eq('id', resultId)
+
+  if (updateError) {
+    alert(`แก้ไขคะแนนไม่สำเร็จ: ${updateError.message}`)
+    return
+  }
+
+  await renderScoreMatrixPage()
+}
+
+window.deleteQuizScore = async (resultId, quizType) => {
+  if (!confirm(`ยืนยันการลบคะแนน ${quizType.toUpperCase()} รายการนี้?`)) return
+  const { error } = await supabase.from(QUIZ_RESULTS_TABLE).delete().eq('id', resultId)
+  if (error) {
+    alert(`ลบคะแนนไม่สำเร็จ: ${error.message}`)
+    return
+  }
+  await renderScoreMatrixPage()
+}
+
+window.cancelQuizScore = async (resultId, quizType) => {
+  if (!confirm(`ต้องการยกเลิกคะแนน ${quizType.toUpperCase()} รายการนี้ใช่หรือไม่?`)) return
+  const canceledPayload = {
+    __canceled: true,
+    canceled_at: new Date().toISOString()
+  }
+  const { error } = await supabase
+    .from(QUIZ_RESULTS_TABLE)
+    .update({ score: 0, total: 0, answers: canceledPayload })
+    .eq('id', resultId)
+
+  if (error) {
+    alert(`ยกเลิกคะแนนไม่สำเร็จ: ${error.message}`)
+    return
+  }
+  await renderScoreMatrixPage()
 }
 
 // ==========================================
@@ -2148,31 +2600,6 @@ function startVQPolling() {
       }
     } catch (_) { }
   }, 300)
-}
-
-window.editVideoQuestion = async (id) => {
-  const { data: q } = await supabase.from(VIDEO_QUESTIONS_TABLE).select('*').eq('id', id).single()
-  if (!q) { alert('ไม่พบคำถาม'); return }
-  openVideoQuestionModal(q, q.course_id)
-}
-
-window.closeVideoQuestionModal = () => {
-  document.getElementById('videoQuestionAdminModal').classList.add('hidden')
-  if (window._vqTimeInterval) clearInterval(window._vqTimeInterval)
-  if (vqPlayer) { try { vqPlayer.destroy() } catch (_) { } vqPlayer = null }
-  const container = document.getElementById('vqPlayerContainer')
-  if (container) container.innerHTML = ''
-}
-
-window.vqSeekTo = (value) => {
-  if (vqPlayer && typeof vqPlayer.seekTo === 'function') {
-    vqPlayer.seekTo(parseInt(value), true)
-  }
-}
-
-window.vqCaptureTime = () => {
-  const timeText = document.getElementById('vqCurrentTime')?.textContent || '00:00'
-  document.getElementById('vqAdminTimestamp').value = timeText
 }
 
 // รับเวลาจาก YouTube iframe API via postMessage
