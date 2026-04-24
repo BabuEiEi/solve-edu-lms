@@ -1468,6 +1468,8 @@ async function renderScoreMatrixPage() {
     supabase.from(COURSES_TABLE).select('course_id,course_name').order('course_id', { ascending: true })
   ])
 
+  console.log('[Matrix] Data fetched:', { users: users?.length, results: results?.length, logs: logs?.length, courses: courses?.length, usersError, resultsError, logsError, coursesError })
+
   const matrixWrap = document.getElementById('scoreMatrixWrap')
   if (!matrixWrap) return
 
@@ -1478,6 +1480,7 @@ async function renderScoreMatrixPage() {
   }
 
   const trainees = (users || []).filter(u => u.status === 'approved' && u.role === 'student')
+  console.log('[Matrix] Filtered trainees:', trainees.length, trainees)
   const courseList = courses || []
   const latestResultByKey = new Map()
     ; (results || []).forEach(r => {
@@ -1591,6 +1594,7 @@ async function renderScoreMatrixPage() {
 
   const applyFilters = () => {
     const filtered = getFilteredTrainees()
+    console.log('[Matrix] After filter:', filtered.length)
     renderMatrixTable(filtered)
     updateExportRows(filtered)
     if (filterSummaryEl) {
