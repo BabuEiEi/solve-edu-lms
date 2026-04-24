@@ -1480,13 +1480,20 @@ async function renderScoreMatrixPage() {
   }
 
   const trainees = (users || []).filter(u => u.status === 'approved' && u.role === 'student')
-  console.log('[Matrix] Filtered trainees:', trainees.length, trainees)
+  console.log('[Matrix] Filtered trainees:', trainees.length, trainees.map(t => ({ id: t.id, full_name: t.full_name, status: t.status, role: t.role })))
   const courseList = courses || []
   const latestResultByKey = new Map()
     ; (results || []).forEach(r => {
       const key = `${r.user_id}:${r.quiz_type}`
       if (!latestResultByKey.has(key)) latestResultByKey.set(key, r)
     })
+
+  console.log('[Matrix] Quiz result mapping:', {
+    totalResults: results?.length,
+    keys: Array.from(latestResultByKey.keys()),
+    pretest: Array.from(latestResultByKey.entries()).filter(([k]) => k.includes('pretest')),
+    traineeIds: trainees.map(t => t.id)
+  })
 
   const logByUserCourse = new Map()
     ; (logs || []).forEach(log => {
@@ -1546,6 +1553,7 @@ async function renderScoreMatrixPage() {
     const rows = filteredTrainees.map((u, idx) => {
       const pre = latestResultByKey.get(`${u.id}:pretest`)
       const post = latestResultByKey.get(`${u.id}:posttest`)
+      console.log(`[Matrix] Row ${idx}: ${u.full_name} (id: ${u.id}) - pretest:`, pre, 'posttest:', post)
       const workCells = courseList.map(c => {
         const log = logByUserCourse.get(`${u.id}:${c.course_id}`)
         if (log?.file_url) {
