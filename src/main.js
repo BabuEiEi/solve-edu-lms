@@ -2179,6 +2179,26 @@ function renderPretestLockedPage(lastResult) {
   `
 }
 
+function renderSubmittedQuizResultPage(quizType, score, total, percent, passed) {
+  const label = quizType === 'pretest' ? 'ก่อนเรียน' : 'หลังเรียน'
+  const borderClass = passed ? 'border-emerald-200' : 'border-orange-200'
+  const scoreClass = passed ? 'text-emerald-600' : 'text-orange-500'
+  const icon = passed ? '🎉' : '📚'
+
+  contentArea.innerHTML = `
+    <div class="max-w-3xl mx-auto w-full animate-fade-in pb-10">
+      <div class="bg-white rounded-2xl shadow-sm border ${borderClass} p-12 text-center">
+        <div class="text-7xl mb-5">${icon}</div>
+        <h1 class="text-3xl font-extrabold text-slate-800 mb-3">ผลแบบทดสอบ${label}</h1>
+        <p class="text-5xl font-extrabold ${scoreClass} mb-3">${percent}%</p>
+        <p class="text-slate-500 text-lg mb-2">ได้ <strong>${score}</strong> คะแนน จากคะแนนเต็ม <strong>${total}</strong> คะแนน</p>
+        ${quizType === 'posttest' ? `<p class="font-bold text-xl ${passed ? 'text-emerald-700' : 'text-orange-600'} mt-4">${passed ? '✅ ผ่านเกณฑ์ (80% ขึ้นไป)' : '❌ ยังไม่ผ่านเกณฑ์ 80%'}</p>` : ''}
+        ${quizType === 'posttest' && !passed ? `<button onclick="loadContent('${quizType}')" class="mt-8 px-10 py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-md">ทำแบบทดสอบใหม่อีกครั้ง</button>` : ''}
+      </div>
+    </div>
+  `
+}
+
 function renderQuizPage(quizType) {
   const label = quizType === 'pretest' ? 'ก่อนเรียน' : 'หลังเรียน'
   const icon = quizType === 'pretest' ? '📝' : '🏆'
@@ -2374,19 +2394,7 @@ window.submitQuiz = async (quizType) => {
     setPretestMenuDisabled(true)
   }
 
-  const resultArea = document.getElementById('quizResultArea')
-  if (resultArea) {
-    resultArea.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-sm border ${passed ? 'border-emerald-200' : 'border-orange-200'} p-12 text-center">
-        <div class="text-7xl mb-5">${passed ? '🎉' : '📚'}</div>
-        <p class="text-5xl font-extrabold ${passed ? 'text-emerald-600' : 'text-orange-500'} mb-3">${percent}%</p>
-        <p class="text-slate-500 text-lg mb-2">ได้ <strong>${score}</strong> คะแนน จากคะแนนเต็ม <strong>${total}</strong> คะแนน</p>
-        ${quizType === 'posttest' ? `<p class="font-bold text-xl ${passed ? 'text-emerald-700' : 'text-orange-600'} mt-4">${passed ? '✅ ผ่านเกณฑ์ (80% ขึ้นไป)' : '❌ ยังไม่ผ่านเกณฑ์ 80%'}</p>` : ''}
-        ${quizType === 'posttest' && !passed ? `<button onclick="loadContent('${quizType}')" class="mt-8 px-10 py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-md">ทำแบบทดสอบใหม่อีกครั้ง</button>` : ''}
-      </div>
-    `
-    resultArea.scrollIntoView({ behavior: 'smooth' })
-  }
+  renderSubmittedQuizResultPage(quizType, score, total, percent, passed)
 }
 
 // ==========================================
