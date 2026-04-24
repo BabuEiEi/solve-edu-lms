@@ -6,7 +6,8 @@
 
 1. เปิดไฟล์ [score_matrix_admin_rpcs.sql](/Users/Phuttarapoln%20K./Workspace/solve-edu-lms/supabase/score_matrix_admin_rpcs.sql)
 2. รัน SQL ทั้งไฟล์ใน Supabase SQL Editor
-3. Deploy หน้าเว็บเวอร์ชันล่าสุด
+3. SQL นี้จะสร้างตาราง `quiz_result_audit_logs` สำหรับเก็บประวัติผู้แก้ไข/เวลาแก้ไขอัตโนมัติ
+4. Deploy หน้าเว็บเวอร์ชันล่าสุด
 
 มี 2 วิธีสำหรับย้ายข้อมูล `Courses` ไป Supabase
 

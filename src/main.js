@@ -1413,9 +1413,12 @@ function formatQuizResultCell(result) {
 function renderQuizResultActions(result, quizType) {
   if (!result) return '<span class="text-xs text-slate-300">-</span>'
 
+  const score = Number(result.score || 0)
+  const total = Number(result.total || 0)
+
   return `
     <div class="flex items-center justify-center gap-1">
-      <button onclick="editQuizScore('${result.id}', '${quizType}')" title="แก้ไขคะแนน" class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition" >
+      <button onclick="editQuizScore('${result.id}', '${quizType}', ${score}, ${total})" title="แก้ไขคะแนน" class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition" >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
       <button onclick="deleteQuizScore('${result.id}', '${quizType}')" title="ลบคะแนน" class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition">
@@ -1475,8 +1478,6 @@ async function renderScoreMatrixPage() {
     supabase.from(COURSES_TABLE).select('course_id,course_name').order('course_id', { ascending: true })
   ])
 
-  console.log('[Matrix] Data fetched:', { users: users?.length, results: results?.length, logs: logs?.length, courses: courses?.length, usersError, resultsError, logsError, coursesError })
-
   const matrixWrap = document.getElementById('scoreMatrixWrap')
   if (!matrixWrap) return
 
@@ -1487,20 +1488,12 @@ async function renderScoreMatrixPage() {
   }
 
   const trainees = (users || []).filter(u => u.status === 'approved' && u.role === 'student')
-  console.log('[Matrix] Filtered trainees:', trainees.length, trainees.map(t => ({ id: t.id, full_name: t.full_name, status: t.status, role: t.role })))
   const courseList = courses || []
   const latestResultByKey = new Map()
     ; (results || []).forEach(r => {
       const key = `${r.user_id}:${r.quiz_type}`
       if (!latestResultByKey.has(key)) latestResultByKey.set(key, r)
     })
-
-  console.log('[Matrix] Quiz result mapping:', {
-    totalResults: results?.length,
-    keys: Array.from(latestResultByKey.keys()),
-    pretest: Array.from(latestResultByKey.entries()).filter(([k]) => k.includes('pretest')),
-    traineeIds: trainees.map(t => t.id)
-  })
 
   const logByUserCourse = new Map()
     ; (logs || []).forEach(log => {
@@ -1560,7 +1553,6 @@ async function renderScoreMatrixPage() {
     const rows = filteredTrainees.map((u, idx) => {
       const pre = latestResultByKey.get(`${u.id}:pretest`)
       const post = latestResultByKey.get(`${u.id}:posttest`)
-      console.log(`[Matrix] Row ${idx}: ${u.full_name} (id: ${u.id}) - pretest:`, pre, 'posttest:', post)
       const workCells = courseList.map(c => {
         const log = logByUserCourse.get(`${u.id}:${c.course_id}`)
         if (log?.file_url) {
@@ -1615,7 +1607,6 @@ async function renderScoreMatrixPage() {
 
   const applyFilters = () => {
     const filtered = getFilteredTrainees()
-    console.log('[Matrix] After filter:', filtered.length)
     renderMatrixTable(filtered)
     updateExportRows(filtered)
     if (filterSummaryEl) {
@@ -1629,23 +1620,9 @@ async function renderScoreMatrixPage() {
   applyFilters()
 }
 
-window.editQuizScore = async (resultId, quizType) => {
-  const { data: rowData, error } = await supabase
-    .rpc('admin_get_quiz_result', { _result_id: resultId })
-  const row = Array.isArray(rowData) ? rowData[0] : rowData
-
-  if (error || !row) {
-    await Swal.fire({
-      icon: 'warning',
-      title: 'ไม่พบข้อมูลคะแนนที่ต้องการแก้ไข',
-      html: 'ความหมายคือระบบหาแถวคะแนนนี้ไม่เจอ หรือบัญชีนี้ไม่มีสิทธิ์อ่านข้อมูลแถวดังกล่าว (RLS)<br><span class="text-xs text-slate-500">ลองรีเฟรชหน้า แล้วตรวจสอบสิทธิ์ admin/staff และนโยบาย RLS ของตาราง quiz_results</span>',
-      confirmButtonText: 'ตกลง'
-    })
-    return
-  }
-
-  const currScore = Number(row.score || 0)
-  const currTotal = Number(row.total || 0)
+window.editQuizScore = async (resultId, quizType, currentScore = 0, currentTotal = 0) => {
+  const currScore = Number(currentScore || 0)
+  const currTotal = Number(currentTotal || 0)
   const { value: scoreForm } = await Swal.fire({
     title: `แก้ไขคะแนน ${quizType.toUpperCase()}`,
     html: `
