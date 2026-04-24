@@ -1463,8 +1463,8 @@ async function renderScoreMatrixPage() {
 
   const [{ data: users, error: usersError }, { data: results, error: resultsError }, { data: logs, error: logsError }, { data: courses, error: coursesError }] = await Promise.all([
     supabase.rpc('get_all_profiles'),
-    supabase.from(QUIZ_RESULTS_TABLE).select('id,user_id,quiz_type,score,total,answers').in('quiz_type', ['pretest', 'posttest']).order('id', { ascending: false }),
-    supabase.from('course_logs').select('id,user_id,course_id,file_url').not('file_url', 'is', null),
+    supabase.rpc('get_all_quiz_results'),
+    supabase.rpc('get_all_course_logs'),
     supabase.from(COURSES_TABLE).select('course_id,course_name').order('course_id', { ascending: true })
   ])
 
