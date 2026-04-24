@@ -1264,6 +1264,37 @@ function styleDataBorders(worksheet) {
   })
 }
 
+function styleSubmissionStatusCells(worksheet, submissionColumnStart, submissionColumnCount) {
+  if (!submissionColumnCount || submissionColumnCount <= 0) return
+
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return
+
+    for (let i = 0; i < submissionColumnCount; i += 1) {
+      const cell = row.getCell(submissionColumnStart + i)
+      const text = String(cell.value || '').trim()
+
+      if (text.startsWith('ส่งแล้ว')) {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFDCFCE7' }
+        }
+        cell.font = { color: { argb: 'FF166534' }, bold: true }
+      } else {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF1F5F9' }
+        }
+        cell.font = { color: { argb: 'FF64748B' }, bold: true }
+      }
+
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
+    }
+  })
+}
+
 function scoreTextForExport(result) {
   if (!result) return '-'
   const parsedAnswers = parseResultAnswers(result.answers)
@@ -1316,6 +1347,7 @@ window.exportScoreMatrixExcel = async () => {
 
     styleHeaderRow(matrixSheet.getRow(1))
     styleDataBorders(matrixSheet)
+    styleSubmissionStatusCells(matrixSheet, 7, scoreMatrixExportCourses.length)
     matrixSheet.views = [{ state: 'frozen', ySplit: 1 }]
     autoFitWorksheetColumns(matrixSheet)
 
