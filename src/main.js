@@ -1630,11 +1630,9 @@ async function renderScoreMatrixPage() {
 }
 
 window.editQuizScore = async (resultId, quizType) => {
-  const { data: row, error } = await supabase
-    .from(QUIZ_RESULTS_TABLE)
-    .select('id,score,total,answers')
-    .eq('id', resultId)
-    .maybeSingle()
+  const { data: rowData, error } = await supabase
+    .rpc('admin_get_quiz_result', { _result_id: resultId })
+  const row = Array.isArray(rowData) ? rowData[0] : rowData
 
   if (error || !row) {
     await Swal.fire({
@@ -1685,14 +1683,12 @@ window.editQuizScore = async (resultId, quizType) => {
 
   const { nextScore, nextTotal } = scoreForm
 
-  const existingAnswers = parseResultAnswers(row.answers)
-  const cleanAnswers = existingAnswers && typeof existingAnswers === 'object' ? { ...existingAnswers } : existingAnswers
-  if (cleanAnswers && typeof cleanAnswers === 'object' && cleanAnswers.__canceled) delete cleanAnswers.__canceled
-
   const { error: updateError } = await supabase
-    .from(QUIZ_RESULTS_TABLE)
-    .update({ score: nextScore, total: nextTotal, answers: cleanAnswers || row.answers || null })
-    .eq('id', resultId)
+    .rpc('admin_update_quiz_result', {
+      _result_id: resultId,
+      _score: nextScore,
+      _total: nextTotal
+    })
 
   if (updateError) {
     await Swal.fire({
@@ -1715,30 +1711,69 @@ window.editQuizScore = async (resultId, quizType) => {
 }
 
 window.deleteQuizScore = async (resultId, quizType) => {
-  if (!confirm(`ยืนยันการลบคะแนน ${quizType.toUpperCase()} รายการนี้?`)) return
-  const { error } = await supabase.from(QUIZ_RESULTS_TABLE).delete().eq('id', resultId)
+  const confirmResult = await Swal.fire({
+    icon: 'warning',
+    title: `ยืนยันการลบคะแนน ${quizType.toUpperCase()}?`,
+    text: 'เมื่อลบแล้วจะไม่สามารถกู้คืนคะแนนรายการนี้ได้',
+    showCancelButton: true,
+    confirmButtonText: 'ลบคะแนน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#dc2626'
+  })
+  if (!confirmResult.isConfirmed) return
+
+  const { error } = await supabase.rpc('admin_delete_quiz_result', { _result_id: resultId })
   if (error) {
-    alert(`ลบคะแนนไม่สำเร็จ: ${error.message}`)
+    await Swal.fire({
+      icon: 'error',
+      title: 'ลบคะแนนไม่สำเร็จ',
+      text: error.message || 'Unknown error',
+      confirmButtonText: 'ตกลง'
+    })
     return
   }
+
+  await Swal.fire({
+    icon: 'success',
+    title: 'ลบคะแนนสำเร็จ',
+    timer: 1200,
+    showConfirmButton: false
+  })
+
   await renderScoreMatrixPage()
 }
 
 window.cancelQuizScore = async (resultId, quizType) => {
-  if (!confirm(`ต้องการยกเลิกคะแนน ${quizType.toUpperCase()} รายการนี้ใช่หรือไม่?`)) return
-  const canceledPayload = {
-    __canceled: true,
-    canceled_at: new Date().toISOString()
-  }
-  const { error } = await supabase
-    .from(QUIZ_RESULTS_TABLE)
-    .update({ score: 0, total: 0, answers: canceledPayload })
-    .eq('id', resultId)
+  const confirmResult = await Swal.fire({
+    icon: 'question',
+    title: `ต้องการยกเลิกคะแนน ${quizType.toUpperCase()} ใช่หรือไม่?`,
+    text: 'ระบบจะตั้งคะแนนเป็น 0/0 และบันทึกสถานะว่ายกเลิกคะแนน',
+    showCancelButton: true,
+    confirmButtonText: 'ยืนยันยกเลิกคะแนน',
+    cancelButtonText: 'กลับ',
+    confirmButtonColor: '#d97706'
+  })
+  if (!confirmResult.isConfirmed) return
+
+  const { error } = await supabase.rpc('admin_cancel_quiz_result', { _result_id: resultId })
 
   if (error) {
-    alert(`ยกเลิกคะแนนไม่สำเร็จ: ${error.message}`)
+    await Swal.fire({
+      icon: 'error',
+      title: 'ยกเลิกคะแนนไม่สำเร็จ',
+      text: error.message || 'Unknown error',
+      confirmButtonText: 'ตกลง'
+    })
     return
   }
+
+  await Swal.fire({
+    icon: 'success',
+    title: 'ยกเลิกคะแนนสำเร็จ',
+    timer: 1200,
+    showConfirmButton: false
+  })
+
   await renderScoreMatrixPage()
 }
 

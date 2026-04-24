@@ -1,5 +1,13 @@
 **Courses Migration**
 
+**Score Matrix Admin RPC (ใหม่)**
+
+สำหรับให้ `admin/staff` แก้ไข/ลบ/ยกเลิกคะแนนได้แม้เปิด RLS:
+
+1. เปิดไฟล์ [score_matrix_admin_rpcs.sql](/Users/Phuttarapoln%20K./Workspace/solve-edu-lms/supabase/score_matrix_admin_rpcs.sql)
+2. รัน SQL ทั้งไฟล์ใน Supabase SQL Editor
+3. Deploy หน้าเว็บเวอร์ชันล่าสุด
+
 มี 2 วิธีสำหรับย้ายข้อมูล `Courses` ไป Supabase
 
 **วิธีที่ 1: SQL ตรง**
