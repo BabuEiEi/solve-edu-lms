@@ -1,6 +1,7 @@
 import './style.css'
 import { supabase } from './supabaseClient.js'
 import ExcelJS from 'exceljs'
+import Swal from 'sweetalert2'
 
 // ==========================================
 // 1. ตั้งค่าพื้นฐาน
@@ -1634,24 +1635,55 @@ window.editQuizScore = async (resultId, quizType) => {
     .select('id,score,total,answers')
     .eq('id', resultId)
     .maybeSingle()
+
   if (error || !row) {
-    alert('ไม่พบข้อมูลคะแนนที่ต้องการแก้ไข')
+    await Swal.fire({
+      icon: 'warning',
+      title: 'ไม่พบข้อมูลคะแนนที่ต้องการแก้ไข',
+      html: 'ความหมายคือระบบหาแถวคะแนนนี้ไม่เจอ หรือบัญชีนี้ไม่มีสิทธิ์อ่านข้อมูลแถวดังกล่าว (RLS)<br><span class="text-xs text-slate-500">ลองรีเฟรชหน้า แล้วตรวจสอบสิทธิ์ admin/staff และนโยบาย RLS ของตาราง quiz_results</span>',
+      confirmButtonText: 'ตกลง'
+    })
     return
   }
 
   const currScore = Number(row.score || 0)
   const currTotal = Number(row.total || 0)
-  const nextScoreRaw = prompt(`แก้ไขคะแนน ${quizType.toUpperCase()} (คะแนนที่ได้)`, String(currScore))
-  if (nextScoreRaw === null) return
-  const nextTotalRaw = prompt(`แก้ไขคะแนน ${quizType.toUpperCase()} (คะแนนเต็ม)`, String(currTotal > 0 ? currTotal : 1))
-  if (nextTotalRaw === null) return
+  const { value: scoreForm } = await Swal.fire({
+    title: `แก้ไขคะแนน ${quizType.toUpperCase()}`,
+    html: `
+      <div class="text-left space-y-3">
+        <div>
+          <label for="swalEditScore" class="block text-sm font-semibold text-slate-700 mb-1">คะแนนที่ได้</label>
+          <input id="swalEditScore" type="number" min="0" step="1" class="swal2-input !m-0 !w-full" value="${currScore}">
+        </div>
+        <div>
+          <label for="swalEditTotal" class="block text-sm font-semibold text-slate-700 mb-1">คะแนนเต็ม</label>
+          <input id="swalEditTotal" type="number" min="1" step="1" class="swal2-input !m-0 !w-full" value="${currTotal > 0 ? currTotal : 1}">
+        </div>
+      </div>
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
+    preConfirm: () => {
+      const nextScore = Number(document.getElementById('swalEditScore')?.value)
+      const nextTotal = Number(document.getElementById('swalEditTotal')?.value)
 
-  const nextScore = Number(nextScoreRaw)
-  const nextTotal = Number(nextTotalRaw)
-  if (!Number.isFinite(nextScore) || !Number.isFinite(nextTotal) || nextScore < 0 || nextTotal <= 0 || nextScore > nextTotal) {
-    alert('รูปแบบคะแนนไม่ถูกต้อง (ต้องเป็นตัวเลข และคะแนนที่ได้ต้องไม่เกินคะแนนเต็ม)')
+      if (!Number.isFinite(nextScore) || !Number.isFinite(nextTotal) || nextScore < 0 || nextTotal <= 0 || nextScore > nextTotal) {
+        Swal.showValidationMessage('รูปแบบคะแนนไม่ถูกต้อง: ต้องเป็นตัวเลข และคะแนนที่ได้ต้องไม่เกินคะแนนเต็ม')
+        return null
+      }
+
+      return { nextScore, nextTotal }
+    }
+  })
+
+  if (!scoreForm) {
     return
   }
+
+  const { nextScore, nextTotal } = scoreForm
 
   const existingAnswers = parseResultAnswers(row.answers)
   const cleanAnswers = existingAnswers && typeof existingAnswers === 'object' ? { ...existingAnswers } : existingAnswers
@@ -1663,9 +1695,21 @@ window.editQuizScore = async (resultId, quizType) => {
     .eq('id', resultId)
 
   if (updateError) {
-    alert(`แก้ไขคะแนนไม่สำเร็จ: ${updateError.message}`)
+    await Swal.fire({
+      icon: 'error',
+      title: 'แก้ไขคะแนนไม่สำเร็จ',
+      text: updateError.message || 'Unknown error',
+      confirmButtonText: 'ตกลง'
+    })
     return
   }
+
+  await Swal.fire({
+    icon: 'success',
+    title: 'บันทึกคะแนนสำเร็จ',
+    timer: 1200,
+    showConfirmButton: false
+  })
 
   await renderScoreMatrixPage()
 }
